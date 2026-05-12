@@ -14,7 +14,7 @@ function getEnc(mission: { encaissements: { mois: string; montant: number }[] },
 }
 
 export default function BFR() {
-  const chartRef  = useRef<HTMLCanvasElement>(null);
+  const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInst = useRef<Chart | null>(null);
 
   const { data: params, isLoading: lParams, error: eParams } = useParams();
@@ -22,17 +22,17 @@ export default function BFR() {
   const { data: missions = [], isLoading: lMissions, error: eMissions } = useMissions();
 
   const isLoading = lParams || lCharges || lMissions;
-  const error     = eParams || eCharges || eMissions;
+  const error = eParams || eCharges || eMissions;
 
   // Valeurs initiales dérivées de l'API, surchargeables par l'utilisateur
-  const defaultT0      = (params?.banque ?? 0) + (params?.coffre ?? 0);
+  const defaultT0 = (params?.banque ?? 0) + (params?.coffre ?? 0);
   const defaultChgMens = useMemo(() => charges.reduce((s, c) => s + (c.budget || 0), 0), [charges]);
 
-  const [t0,       setT0]       = useState(0);
-  const [chgMens,  setChgMens]  = useState(0);
-  const [rxCompl,  setRxCompl]  = useState(0);
-  const [horizon,  setHorizon]  = useState(6);
-  const [synced,   setSynced]   = useState(false);
+  const [t0, setT0] = useState(0);
+  const [chgMens, setChgMens] = useState(0);
+  const [rxCompl, setRxCompl] = useState(0);
+  const [horizon, setHorizon] = useState(6);
+  const [synced, setSynced] = useState(false);
 
   // Sync les valeurs dès que les données API arrivent (une seule fois)
   useEffect(() => {
@@ -47,28 +47,28 @@ export default function BFR() {
   const projection = useMemo(() => {
     let treso = t0;
     return MF.slice(0, horizon).map((mois, i) => {
-      const k       = MK[i];
+      const k = MK[i];
       const entrees = missions.reduce((s, m) => s + getEnc(m, k), 0) + rxCompl;
-      const chg     = chgMens;
-      treso         = treso + entrees - chg;
+      const chg = chgMens;
+      treso = treso + entrees - chg;
       return { mois, k, entrees, chg, tresoFin: treso, bfr: entrees - chg };
     });
   }, [t0, chgMens, rxCompl, horizon, missions]);
 
-  const totalEntrees   = projection.reduce((s, r) => s + r.entrees, 0);
-  const moisPositifs   = projection.filter(r => r.bfr >= 0).length;
-  const tresoMin       = Math.min(...projection.map(r => r.tresoFin));
-  const moisTresoNeg   = projection.filter(r => r.tresoFin < 0).length;
+  const totalEntrees = projection.reduce((s, r) => s + r.entrees, 0);
+  const moisPositifs = projection.filter(r => r.bfr >= 0).length;
+  const tresoMin = Math.min(...projection.map(r => r.tresoFin));
+  const moisTresoNeg = projection.filter(r => r.tresoFin < 0).length;
 
   // Graphique
   useEffect(() => {
     chartInst.current?.destroy();
-    const style    = getComputedStyle(document.documentElement);
-    const cG       = style.getPropertyValue('--G').trim();
-    const cB       = style.getPropertyValue('--B').trim();
-    const cBor     = style.getPropertyValue('--bor').trim();
-    const cTx3     = style.getPropertyValue('--tx3').trim();
-    const cTx      = style.getPropertyValue('--tx').trim();
+    const style = getComputedStyle(document.documentElement);
+    const cG = style.getPropertyValue('--G').trim();
+    const cB = style.getPropertyValue('--B').trim();
+    const cBor = style.getPropertyValue('--bor').trim();
+    const cTx3 = style.getPropertyValue('--tx3').trim();
+    // const cTx      = style.getPropertyValue('--tx').trim();
 
     if (chartRef.current) {
       chartInst.current = new Chart(chartRef.current, {
@@ -257,14 +257,16 @@ export default function BFR() {
                 {/* Total row */}
                 <tr style={{ background: 'var(--sur2)', borderTop: '1px solid var(--bor2)' }}>
                   <td colSpan={3} className="fw7" style={{ fontSize: 11, color: 'var(--tx3)', padding: '6px 10px' }}>Total encaissements</td>
-                  {MK.slice(0, horizon).map((k, i) => {
+                  {MK.slice(0, horizon).map((k) => {
                     const tot = missions.reduce((s, m) => s + getEnc(m, k), 0) + rxCompl;
                     return (
                       <td key={k} className="tnum fw7" style={{ fontSize: 11, color: tot > 0 ? 'var(--G)' : 'var(--tx3)' }}>
                         {tot > 0 ? fmt(tot) : '—'}
                       </td>
                     );
-                  })}
+                  }
+
+                  )}
                 </tr>
               </tbody>
             </table>

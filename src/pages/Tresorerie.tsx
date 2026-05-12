@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useMemo } from 'react';
-import { Pencil, Save } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { Chart, registerables, type ChartDataset } from 'chart.js';
 import { fmt, MF, THIS_YEAR } from '../utils/format';
 import YearSelect from '../components/ui/YearSelect';
@@ -18,23 +18,23 @@ const EMPTY: ApiTresorerie = {
 };
 
 export default function Tresorerie() {
-  const chartRef  = useRef<HTMLCanvasElement>(null);
+  const chartRef = useRef<HTMLCanvasElement>(null);
   const chart2Ref = useRef<HTMLCanvasElement>(null);
-  const chartInst  = useRef<Chart | null>(null);
+  const chartInst = useRef<Chart | null>(null);
   const chart2Inst = useRef<Chart | null>(null);
 
-  const [annee, setAnnee]         = useState(THIS_YEAR);
+  const [annee, setAnnee] = useState(THIS_YEAR);
   const [editTarget, setEditTarget] = useState<ApiTresorerie | null>(null);
-  const [saveError, setSaveError]  = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // form state
-  const [fType,    setFType]    = useState('prevision');
-  const [fBanque,  setFBanque]  = useState(0);
-  const [fCoffre,  setFCoffre]  = useState(0);
+  const [fType, setFType] = useState('prevision');
+  const [fBanque, setFBanque] = useState(0);
+  const [fCoffre, setFCoffre] = useState(0);
   const [fEntrees, setFEntrees] = useState(0);
-  const [fPrev,    setFPrev]    = useState(0);
-  const [fPay,     setFPay]     = useState(0);
-  const [fReste,   setFReste]   = useState(0);
+  const [fPrev, setFPrev] = useState(0);
+  const [fPay, setFPay] = useState(0);
+  const [fReste, setFReste] = useState(0);
 
   const { data: rows = [], isLoading, error } = useTresorerie(annee);
   const { data: params } = useParams();
@@ -46,9 +46,9 @@ export default function Tresorerie() {
     return MF.map(m => moisMap.get(m) ?? { ...EMPTY, mois: m, annee });
   }, [rows, annee]);
 
-  const totalEntrees  = grid.reduce((s, r) => s + r.entrees, 0);
-  const totalChgPrev  = grid.reduce((s, r) => s + r.chgPrev, 0);
-  const totalChgPay   = grid.reduce((s, r) => s + r.chgPay,  0);
+  const totalEntrees = grid.reduce((s, r) => s + r.entrees, 0);
+  const totalChgPrev = grid.reduce((s, r) => s + r.chgPrev, 0);
+  const totalChgPay = grid.reduce((s, r) => s + r.chgPay, 0);
 
   // Charts
   useEffect(() => {
@@ -86,7 +86,7 @@ export default function Tresorerie() {
           labels,
           datasets: [
             { label: 'Tréso cumulée', data: cumulData, borderColor: '#1B5E40', backgroundColor: 'rgba(27,94,64,.08)', fill: true, tension: 0.3, pointRadius: 4 },
-            { label: 'BFR mensuel',   data: grid.map(r => r.entrees - r.chgPrev), borderColor: '#1A4E8A', backgroundColor: 'transparent', tension: 0.3, pointRadius: 3, borderDash: [4, 4] },
+            { label: 'BFR mensuel', data: grid.map(r => r.entrees - r.chgPrev), borderColor: '#1A4E8A', backgroundColor: 'transparent', tension: 0.3, pointRadius: 3, borderDash: [4, 4] },
           ],
         },
         options: {
