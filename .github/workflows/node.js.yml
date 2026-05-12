@@ -38,8 +38,6 @@ jobs:
 
       - name: Build
         run: pnpm build
-        env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL_CLIENT }}
 
       - name: Upload files to VPS
         uses: appleboy/scp-action@v0.1.7
@@ -48,7 +46,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           source: "dist/*"
-          target: /home/admin_marabu/ocean-front/oceancore-desk-client
+          target: /home/admin_marabu/apps/marabucoo-front
           strip_components: 1
           rm: true
 
