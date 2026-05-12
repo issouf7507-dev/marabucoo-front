@@ -1,0 +1,2253 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MARABU SERVICES — Tableau de Bord COO</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F0EDE6;--sur:#FDFCF9;--sur2:#F5F3EE;--sur3:#EAE7E0;
+  --bor:#E2DDD5;--bor2:#C8C2B8;--bor3:#A89E90;
+  --tx:#1C1A16;--tx2:#5C5648;--tx3:#9C9284;
+  --G:#1B5E40;--Gl:#E8F5EE;--Gm:#236B4A;--Gs:#A7D4BB;
+  --R:#B53A2A;--Rl:#FEF0EE;--Rs:#F4A89E;
+  --A:#B5620A;--Al:#FEF3E2;--As:#F4C580;
+  --B:#1A4E8A;--Bl:#EBF2FC;--Bs:#8AB4E8;
+  --P:#5B3FA0;--Pl:#F0ECFC;--Ps:#B8A4E8;
+  --T:#0D7C6E;--Tl:#E8F8F6;--Ts:#84CFC6;
+  --ff:'DM Sans',system-ui,sans-serif;--fm:'DM Mono','Courier New',monospace;
+  --r:6px;--rl:10px;--rxl:16px;
+  --sh:0 1px 2px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.06);
+  --sh2:0 2px 8px rgba(0,0,0,.08),0 12px 32px rgba(0,0,0,.1);
+}
+html,body{height:100%;font-family:var(--ff);background:var(--bg);color:var(--tx);font-size:13px;line-height:1.5}
+#wrap{display:flex;height:100vh;overflow:hidden}
+
+/* ── SIDEBAR ── */
+#sb{width:196px;flex-shrink:0;background:var(--tx);display:flex;flex-direction:column;overflow-y:auto;transition:.3s}
+.sb-brand{padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sb-logo{font-size:15px;font-weight:700;color:#fff;letter-spacing:.06em;text-transform:uppercase}
+.sb-sub{font-size:10px;color:rgba(255,255,255,.4);margin-top:3px;letter-spacing:.04em}
+.sb-nav{padding:8px 0;flex:1}
+.sb-sep{padding:12px 14px 4px;font-size:9px;font-weight:700;color:rgba(255,255,255,.3);letter-spacing:.1em;text-transform:uppercase}
+.sb-a{display:flex;align-items:center;gap:8px;padding:7px 14px;font-size:12px;color:rgba(255,255,255,.6);text-decoration:none;cursor:pointer;transition:.12s;border-left:2px solid transparent}
+.sb-a:hover{color:rgba(255,255,255,.9);background:rgba(255,255,255,.06)}
+.sb-a.on{color:#fff;background:rgba(255,255,255,.1);border-left-color:#6FCF97;font-weight:600}
+.sb-a .ic{font-size:13px;width:16px;text-align:center;flex-shrink:0}
+.sb-foot{padding:12px 14px;border-top:1px solid rgba(255,255,255,.1);font-size:10px;color:rgba(255,255,255,.3)}
+
+/* ── MAIN ── */
+#main{flex:1;overflow-y:auto;overflow-x:hidden;background:var(--bg)}
+.pg{display:none;padding:24px 28px;min-height:100%}
+.pg.on{display:block}
+
+/* ── PAGE HEADER ── */
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;gap:12px;flex-wrap:wrap}
+.ph-l h1{font-size:20px;font-weight:700;letter-spacing:-.02em}
+.ph-l p{font-size:12px;color:var(--tx3);margin-top:3px}
+.ph-r{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* ── GRID UTILS ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+
+/* ── CARD ── */
+.card{background:var(--sur);border:1px solid var(--bor);border-radius:var(--rl);box-shadow:var(--sh);margin-bottom:14px}
+.ch{padding:12px 16px;border-bottom:1px solid var(--bor);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ch h3{font-size:12.5px;font-weight:700;letter-spacing:-.01em}
+.cb{padding:16px}
+
+/* ── KPI ── */
+.kr{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;margin-bottom:16px}
+.kpi{background:var(--sur);border:1px solid var(--bor);border-radius:var(--rl);padding:14px 16px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--k-col,var(--bor2));border-radius:var(--rl) var(--rl) 0 0}
+.kpi-l{font-size:9.5px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.kpi-v{font-size:20px;font-weight:700;font-family:var(--fm);letter-spacing:-.02em;line-height:1}
+.kpi-s{font-size:10px;color:var(--tx3);margin-top:4px}
+.kpi.g{--k-col:var(--G);background:var(--Gl)}.kpi.g .kpi-v{color:var(--G)}
+.kpi.r{--k-col:var(--R);background:var(--Rl)}.kpi.r .kpi-v{color:var(--R)}
+.kpi.a{--k-col:var(--A);background:var(--Al)}.kpi.a .kpi-v{color:var(--A)}
+.kpi.b{--k-col:var(--B);background:var(--Bl)}.kpi.b .kpi-v{color:var(--B)}
+.kpi.p{--k-col:var(--P);background:var(--Pl)}.kpi.p .kpi-v{color:var(--P)}
+.kpi.t{--k-col:var(--T);background:var(--Tl)}.kpi.t .kpi-v{color:var(--T)}
+
+/* ── TABLES ── */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 10px;font-size:9.5px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--bor);background:var(--sur2);white-space:nowrap;position:sticky;top:0}
+td{padding:7px 10px;border-bottom:1px solid var(--bor);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:var(--sur2)}
+.te{border:1px solid transparent;background:transparent;font-size:11.5px;font-family:var(--ff);color:var(--tx);padding:2px 5px;border-radius:4px;width:100%;min-width:55px}
+.te:hover{border-color:var(--bor2)}
+.te:focus{border-color:var(--G);outline:0;background:var(--sur);box-shadow:0 0 0 2px rgba(27,94,64,.12)}
+.te-num{text-align:right;font-family:var(--fm)}
+select.te{cursor:pointer}
+
+/* ── BADGES ── */
+.bdg{display:inline-flex;align-items:center;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap;letter-spacing:.01em}
+.bg{background:var(--Gl);color:var(--G)}.br{background:var(--Rl);color:var(--R)}
+.ba{background:var(--Al);color:var(--A)}.bb{background:var(--Bl);color:var(--B)}
+.bp{background:var(--Pl);color:var(--P)}.bt{background:var(--Tl);color:var(--T)}
+.bn{background:var(--sur3);color:var(--tx2)}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--r);font-size:12px;font-family:var(--ff);font-weight:600;cursor:pointer;border:1px solid var(--bor2);background:var(--sur);color:var(--tx);transition:.12s;text-decoration:none;white-space:nowrap}
+.btn:hover{background:var(--sur2);border-color:var(--bor3)}
+.btn.prim{background:var(--G);color:#fff;border-color:var(--G)}.btn.prim:hover{background:var(--Gm)}
+.btn.sec{background:var(--Bl);color:var(--B);border-color:var(--Bs)}
+.btn.xs{padding:3px 8px;font-size:11px}
+.btn.sm{padding:5px 11px;font-size:11.5px}
+.ibt{background:0;border:0;cursor:pointer;padding:3px 6px;border-radius:4px;font-size:12px;color:var(--tx3);transition:.1s}
+.ibt:hover{background:var(--Rl);color:var(--R)}
+.ebt{background:0;border:1px solid var(--bor2);cursor:pointer;padding:2px 8px;border-radius:4px;font-size:11px;color:var(--tx2);transition:.1s}
+.ebt:hover{border-color:var(--G);color:var(--G)}
+
+/* ── TABS ── */
+.tabs{display:flex;border-bottom:1px solid var(--bor);margin-bottom:16px;overflow-x:auto;gap:0}
+.tab{padding:8px 16px;font-size:12px;cursor:pointer;color:var(--tx3);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:.12s;font-weight:500}
+.tab.on{color:var(--G);border-color:var(--G);font-weight:700}
+.tab:hover:not(.on){color:var(--tx)}
+
+/* ── FORMS ── */
+.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:12px}
+.fr{display:flex;flex-direction:column;gap:4px}
+.fr.full{grid-column:1/-1}
+.lbl{font-size:11px;font-weight:700;color:var(--tx2);letter-spacing:.01em}
+.inp,.sel,.ta{padding:7px 10px;border:1px solid var(--bor2);border-radius:var(--r);font-size:12px;font-family:var(--ff);background:var(--sur);color:var(--tx);width:100%;transition:.12s}
+.inp:focus,.sel:focus,.ta:focus{outline:0;border-color:var(--G);box-shadow:0 0 0 3px rgba(27,94,64,.1)}
+.ta{resize:vertical;min-height:64px}
+.fa{display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid var(--bor);margin-top:6px}
+
+/* ── MODAL ── */
+.mbo{display:none;position:fixed;inset:0;background:rgba(28,26,22,.5);z-index:1000;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px)}
+.mbo.on{display:flex}
+.mod{background:var(--sur);border-radius:var(--rxl);box-shadow:var(--sh2);width:640px;max-width:100%;max-height:92vh;overflow-y:auto;border:1px solid var(--bor)}
+.mh{padding:18px 22px 14px;border-bottom:1px solid var(--bor);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--sur);z-index:1;border-radius:var(--rxl) var(--rxl) 0 0}
+.mh h3{font-size:15px;font-weight:700;letter-spacing:-.02em}
+.mx{background:0;border:0;font-size:22px;cursor:pointer;color:var(--tx3);line-height:1;padding:2px 6px;border-radius:4px}
+.mx:hover{background:var(--sur3);color:var(--tx)}
+.mbody{padding:20px 22px}
+.mf{padding:14px 22px;border-top:1px solid var(--bor);display:flex;justify-content:flex-end;gap:8px;background:var(--sur2);border-radius:0 0 var(--rxl) var(--rxl)}
+
+/* ── TOGGLE ── */
+.tgw{display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none}
+.tg{position:relative;width:34px;height:19px;flex-shrink:0}
+.tg input{opacity:0;width:0;height:0;position:absolute}
+.tgs{position:absolute;inset:0;background:var(--bor2);border-radius:20px;cursor:pointer;transition:.2s}
+.tgs::before{content:'';position:absolute;width:13px;height:13px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.tg input:checked+.tgs{background:var(--G)}
+.tg input:checked+.tgs::before{transform:translateX(15px)}
+
+/* ── DROPZONE ── */
+.dz{border:2px dashed var(--bor2);border-radius:var(--r);padding:20px;text-align:center;color:var(--tx3);cursor:pointer;transition:.15s;position:relative}
+.dz:hover,.dz.drag{border-color:var(--G);background:var(--Gl);color:var(--G)}
+.dz input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.dz-ic{font-size:24px;margin-bottom:5px}
+.flist{margin-top:8px;display:flex;flex-direction:column;gap:4px}
+.fitem{display:flex;align-items:center;gap:7px;padding:5px 9px;background:var(--Bl);border-radius:6px;font-size:11px;color:var(--B)}
+
+/* ── PERIOD BAR ── */
+.pb{display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.pb-btn{padding:4px 11px;border:1px solid var(--bor2);border-radius:20px;font-size:11.5px;cursor:pointer;background:var(--sur);color:var(--tx2);transition:.12s;font-family:var(--ff)}
+.pb-btn.on{background:var(--G);color:#fff;border-color:var(--G)}
+
+/* ── PIPELINE ── */
+.pl-board{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:14px}
+.pl-col{flex:0 0 150px;background:var(--sur2);border-radius:var(--r);border:1px solid var(--bor);padding:10px}
+.pl-col-h{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:8px;text-align:center}
+.pl-item{background:var(--sur);border:1px solid var(--bor);border-radius:var(--r);padding:8px 10px;margin-bottom:6px;cursor:pointer;transition:.12s;border-left:3px solid var(--Gs)}
+.pl-item:hover{border-color:var(--G);box-shadow:var(--sh)}
+.pl-n{font-weight:700;font-size:12px;margin-bottom:2px;line-height:1.3}
+.pl-a{color:var(--G);font-family:var(--fm);font-size:11px;margin-bottom:2px}
+.pl-c{color:var(--tx3);font-size:10.5px}
+.pl-app{color:var(--B);font-size:10px;font-weight:700}
+
+/* ── ALERT ── */
+.alert{padding:10px 14px;border-radius:var(--r);font-size:12px;margin-bottom:10px;border-left:3px solid;display:flex;gap:8px;align-items:flex-start}
+.alert.g{background:var(--Gl);color:var(--G);border-color:var(--G)}
+.alert.r{background:var(--Rl);color:var(--R);border-color:var(--R)}
+.alert.a{background:var(--Al);color:var(--A);border-color:var(--A)}
+.alert.b{background:var(--Bl);color:var(--B);border-color:var(--B)}
+
+/* ── MISC ── */
+.fr2{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.fb{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.cw{position:relative;width:100%}
+.fw7{font-weight:700}.mono{font-family:var(--fm)}
+.tc{color:var(--G)}.rc{color:var(--R)}.ac{color:var(--A)}.bc{color:var(--B)}.pc{color:var(--P)}
+.tr{text-align:right}.tnum{font-family:var(--fm);text-align:right}
+.sep{font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em;padding:10px 0 8px;border-bottom:1px solid var(--bor);margin-bottom:12px}
+.empty{text-align:center;padding:32px;color:var(--tx3);font-size:12px}
+.av{width:30px;height:30px;border-radius:50%;background:var(--Gl);color:var(--G);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pc-num{font-family:var(--fm);font-size:10.5px;font-weight:700;color:var(--P);background:var(--Pl);padding:1px 7px;border-radius:4px}
+.prog{height:5px;background:var(--bor);border-radius:5px;overflow:hidden;margin-top:4px}
+.prog-b{height:100%;border-radius:5px;background:var(--G);transition:width .4s}
+.over{background:var(--Rl)!important}
+
+@media(max-width:800px){
+  #sb{width:48px}
+  .sb-logo,.sb-sub,.sb-sep,.sb-a span,.sb-foot{display:none}
+  .sb-a{padding:10px;justify-content:center}
+  .g2,.g3,.g4{grid-template-columns:1fr}
+  .pg{padding:12px}
+}
+</style>
+</head>
+<body>
+<div id="wrap">
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside id="sb">
+  <div class="sb-brand">
+    <div class="sb-logo">Marabu</div>
+    <div class="sb-sub">Tableau de bord COO</div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-sep">Vue globale</div>
+    <a class="sb-a on" data-p="dashboard"><span class="ic">◈</span><span>Tableau de bord</span></a>
+
+    <div class="sb-sep">Pipeline commercial</div>
+    <a class="sb-a" data-p="missions"><span class="ic">◐</span><span>Missions & Pipeline</span></a>
+    <a class="sb-a" data-p="facturation"><span class="ic">◑</span><span>Facturation</span></a>
+    <a class="sb-a" data-p="encaissements"><span class="ic">◒</span><span>Encaissements</span></a>
+
+    <div class="sb-sep">Charges & Dépenses</div>
+    <a class="sb-a" data-p="salaires"><span class="ic">◎</span><span>Détail salaires</span></a>
+    <a class="sb-a" data-p="charges"><span class="ic">◓</span><span>Charges fixes</span></a>
+    <a class="sb-a" data-p="depenses"><span class="ic">◔</span><span>Dépenses banque</span></a>
+    <a class="sb-a" data-p="petite-caisse"><span class="ic">◕</span><span>Petite caisse</span></a>
+
+    <div class="sb-sep">Analyse financière</div>
+    <a class="sb-a" data-p="tresorerie"><span class="ic">◉</span><span>Trésorerie</span></a>
+    <a class="sb-a" data-p="bfr"><span class="ic">◊</span><span>BFR Prévisionnel</span></a>
+    <a class="sb-a" data-p="tva"><span class="ic">✦</span><span>TVA estimative</span></a>
+
+    <div class="sb-sep">Configuration</div>
+    <a class="sb-a" data-p="parametres"><span class="ic">⚙</span><span>Paramètres</span></a>
+  </nav>
+  <div class="sb-foot">MARABU SERVICES · CI · 2026</div>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<main id="main">
+
+<!-- ██████ DASHBOARD ██████ -->
+<div class="pg on" id="p-dashboard">
+  <div class="ph">
+    <div class="ph-l"><h1>Tableau de bord</h1><p id="dash-date"></p></div>
+    <div class="ph-r">
+      <button class="btn sm" onclick="exportExcel('dashboard')">⬇ Exporter</button>
+    </div>
+  </div>
+  <div class="kr" id="d-kpis"></div>
+  <div class="g2" style="margin-bottom:14px">
+    <div class="card">
+      <div class="ch"><h3>Flux mensuel — Entrées missions vs Charges 2026</h3></div>
+      <div class="cb"><div class="cw" style="height:215px"><canvas id="ch-flux"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="ch"><h3>Répartition des charges budgétées</h3></div>
+      <div class="cb"><div class="cw" style="height:215px"><canvas id="ch-cat"></canvas></div></div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ch fb"><h3>Missions actives</h3><button class="btn xs" onclick="nav('missions')">Voir →</button></div>
+      <div class="tw"><table><thead><tr><th>Mission</th><th>Client</th><th>Apporteur</th><th>Montant HT</th><th>Encaissé</th><th>Étape</th></tr></thead><tbody id="d-missions"></tbody></table></div>
+    </div>
+    <div class="card">
+      <div class="ch"><h3>Alertes & situations à surveiller</h3></div>
+      <div class="cb" id="d-alerts"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ██████ MISSIONS ██████ -->
+<div class="pg" id="p-missions">
+  <div class="ph">
+    <div class="ph-l"><h1>Missions & Pipeline</h1><p>Cycle complet Prospect → TDR → Propale → Contrat → Facturation → Clôture</p></div>
+    <div class="ph-r">
+      <button class="btn sm" onclick="exportExcel('missions')">⬇ Excel</button>
+      <button class="btn prim" onclick="openMod('mo-mis',null)">+ Nouvelle mission</button>
+    </div>
+  </div>
+  <div class="pl-board" id="pipeline"></div>
+  <div class="card">
+    <div class="ch fb">
+      <h3>Toutes les missions</h3>
+      <div class="fr2">
+        <select class="sel" id="fil-m-st" onchange="renderMTable()" style="width:140px">
+          <option value="">Tous statuts</option>
+          <option value="prospect">Prospect</option><option value="tdr">TDR envoyé</option>
+          <option value="propale">Propale</option><option value="contrat">Contrat signé</option>
+          <option value="en_cours">En cours</option><option value="termine">Terminé</option>
+          <option value="perdu">Perdu</option>
+        </select>
+        <select class="sel" id="fil-m-ap" onchange="renderMTable()" style="width:120px">
+          <option value="">Tous apporteurs</option>
+          <option>HBS</option><option>TDA</option><option>TEZ</option><option>AFO</option><option>AUTRES</option>
+        </select>
+      </div>
+    </div>
+    <div class="tw"><table><thead><tr>
+      <th>Mission</th><th>Client</th><th>Apporteur</th><th>Montant HT</th><th>Avance reçue</th><th>Reste</th>
+      <th>Début</th><th>Fin</th><th>Étape</th><th>TVA</th><th>Nature</th><th></th>
+    </tr></thead><tbody id="m-tbl"></tbody></table></div>
+  </div>
+</div>
+
+<!-- ██████ FACTURATION ██████ -->
+<div class="pg" id="p-facturation">
+  <div class="ph">
+    <div class="ph-l"><h1>Facturation</h1><p>Factures normalisées, tranches d'encaissement, justificatifs par paiement</p></div>
+    <div class="ph-r">
+      <button class="btn sm" onclick="exportExcel('factures')">⬇ Excel</button>
+      <button class="btn prim" onclick="openMod('mo-fac',null)">+ Nouvelle facture</button>
+    </div>
+  </div>
+  <div class="tabs" id="fact-tabs">
+    <div class="tab on" data-ft="factures">Factures émises</div>
+    <div class="tab" data-ft="echeancier">Échéancier tranches</div>
+  </div>
+  <div id="fact-content"></div>
+</div>
+
+<!-- ██████ ENCAISSEMENTS ██████ -->
+<div class="pg" id="p-encaissements">
+  <div class="ph">
+    <div class="ph-l"><h1>Encaissements banque</h1><p>Rapprochement entre tableau d'encaissement et entrées bancaires réelles</p></div>
+    <div class="ph-r"><button class="btn sm" onclick="exportExcel('encaissements')">⬇ Excel</button></div>
+  </div>
+  <div class="kr" id="enc-kpis"></div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch fb"><h3>Rapprochement tranches / entrées banque</h3>
+      <select class="sel" id="fil-enc-m" onchange="renderEnc()" style="width:130px">
+        <option value="">Tous les mois</option>
+        <option>JANVIER</option><option>FEVRIER</option><option>MARS</option><option>AVRIL</option>
+        <option>MAI</option><option>JUIN</option>
+      </select>
+    </div>
+    <div class="tw"><table><thead><tr>
+      <th>Mission</th><th>N° Facture</th><th>Tranche</th><th>Montant prévu</th><th>Échéance</th>
+      <th>Encaissé</th><th>Date enc.</th><th>Réf. bordereau</th><th>Écart</th><th>Statut</th><th>Justif.</th>
+    </tr></thead><tbody id="enc-tbl"></tbody></table></div>
+  </div>
+  <div class="card">
+    <div class="ch"><h3>Entrées banque brutes (journal)</h3></div>
+    <div class="tw"><table><thead><tr>
+      <th>Date</th><th>Période</th><th>Qualité / Référence</th><th>Désignation</th><th>Crédit (FCFA)</th><th>Catégorie</th>
+    </tr></thead><tbody id="enc-tbl2"></tbody></table></div>
+  </div>
+</div>
+
+<!-- ██████ SALAIRES ██████ -->
+<div class="pg" id="p-salaires">
+  <div class="ph">
+    <div class="ph-l"><h1>Détail salaires</h1><p>Suivi mensuel individuel — paie réelle par collaborateur et par mois</p></div>
+    <div class="ph-r">
+      <button class="btn sm" onclick="exportExcel('salaires')">⬇ Excel</button>
+      <button class="btn prim" onclick="openMod('mo-staff',null)">+ Collaborateur</button>
+    </div>
+  </div>
+  <div class="kr" id="sal-kpis"></div>
+  <div class="fr2" style="margin-bottom:14px">
+    <span class="lbl" style="color:var(--tx3)">Mois :</span>
+    <select class="sel" id="sal-mois" onchange="renderSal()" style="width:130px">
+      <option value="0">Janvier</option><option value="1">Février</option>
+      <option value="2">Mars</option><option value="3" selected>Avril</option>
+      <option value="4">Mai</option><option value="5">Juin</option>
+      <option value="6">Juillet</option><option value="7">Août</option>
+      <option value="8">Septembre</option><option value="9">Octobre</option>
+      <option value="10">Novembre</option><option value="11">Décembre</option>
+    </select>
+    <select class="sel" id="fil-sal-s" onchange="renderSal()" style="width:110px">
+      <option value="">Tous</option><option value="actif">Actifs</option><option value="inactif">Inactifs</option>
+    </select>
+    <select class="sel" id="fil-sal-p" onchange="renderSal()" style="width:140px">
+      <option value="">Tous payeurs</option><option value="marabu">Payé Marabu</option><option value="ext">Autre source</option>
+    </select>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch fb"><h3 id="sal-title">Salaires — Avril 2026</h3><div class="fr2" id="sal-mkpi"></div></div>
+    <div class="tw"><table><thead><tr>
+      <th>Collaborateur</th><th>Poste</th><th>Salaire base</th><th>Payé (mois)</th>
+      <th>Statut</th><th>Nature</th><th>Marabu</th><th>Actif</th><th>Début</th><th>Fin</th><th></th>
+    </tr></thead>
+    <tbody id="sal-tbl"></tbody>
+    <tfoot><tr>
+      <td colspan="2" class="fw7" style="padding:7px 10px;font-size:12px">TOTAL</td>
+      <td class="tnum fw7" id="sal-tb"></td><td class="tnum fw7 tc" id="sal-tp"></td>
+      <td colspan="7"></td>
+    </tr></tfoot>
+    </table></div>
+  </div>
+  <div class="card">
+    <div class="ch"><h3>Vue annuelle 2026 — Historique mensuel par collaborateur</h3></div>
+    <div class="tw" id="sal-annuel"></div>
+  </div>
+</div>
+
+<!-- ██████ CHARGES ██████ -->
+<div class="pg" id="p-charges">
+  <div class="ph">
+    <div class="ph-l"><h1>Charges fixes & Variables</h1><p>Budget prévu vs réalisé — dépassements mis en évidence</p></div>
+    <div class="ph-r">
+      <button class="btn sm" onclick="exportExcel('charges')">⬇ Excel</button>
+      <button class="btn prim" onclick="openMod('mo-chg',null)">+ Poste de charge</button>
+    </div>
+  </div>
+  <div class="kr" id="chg-kpis"></div>
+  <div class="fr2" style="margin-bottom:14px">
+    <span class="lbl" style="color:var(--tx3)">Mois :</span>
+    <select class="sel" id="chg-mois" onchange="renderChg()" style="width:130px">
+      <option value="0">Janvier</option><option value="1">Février</option>
+      <option value="2">Mars</option><option value="3" selected>Avril</option>
+      <option value="4">Mai</option><option value="5">Juin</option>
+      <option value="6">Juillet</option><option value="7">Août</option>
+      <option value="8">Septembre</option><option value="9">Octobre</option>
+      <option value="10">Novembre</option><option value="11">Décembre</option>
+    </select>
+    <select class="sel" id="fil-chg-cat" onchange="renderChg()" style="width:160px">
+      <option value="">Toutes catégories</option>
+      <option value="RH">Ressources humaines</option>
+      <option value="EXPLOIT">Exploitation</option>
+      <option value="UTIL">Utilités</option>
+      <option value="VAR">Variable courante</option>
+    </select>
+    <select class="sel" id="fil-chg-ty" onchange="renderChg()" style="width:130px">
+      <option value="">Prévu + Imprévu</option>
+      <option value="prevu">Prévu seulement</option>
+      <option value="imprevu">Imprévu seulement</option>
+    </select>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch fb"><h3 id="chg-title">Charges — Avril 2026</h3><div class="fr2" id="chg-mkpi"></div></div>
+    <div class="tw"><table><thead><tr>
+      <th>Poste</th><th>Catégorie</th><th>Nature</th><th>Type</th><th>Périodicité</th>
+      <th>Budget prévu</th><th>Réalisé</th><th>Écart</th><th>Statut</th><th>Date pmt</th><th>Observations</th><th></th>
+    </tr></thead>
+    <tbody id="chg-tbl"></tbody>
+    <tfoot><tr>
+      <td colspan="5" class="fw7" style="padding:7px 10px">TOTAL</td>
+      <td class="tnum fw7 ac" id="chg-tb"></td>
+      <td class="tnum fw7 rc" id="chg-tr"></td>
+      <td class="tnum fw7" id="chg-te"></td>
+      <td colspan="4"></td>
+    </tr></tfoot>
+    </table></div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch"><h3>Graphique prévu vs réalisé — 2026 (tous mois)</h3></div>
+    <div class="cb"><div class="cw" style="height:220px"><canvas id="ch-chg"></canvas></div></div>
+  </div>
+  <div class="card">
+    <div class="ch"><h3>Budget annuel 2026 — Suivi mensuel par poste</h3></div>
+    <div class="tw" id="chg-annuel"></div>
+  </div>
+</div>
+
+<!-- ██████ DÉPENSES BANQUE ██████ -->
+<div class="pg" id="p-depenses">
+  <div class="ph">
+    <div class="ph-l"><h1>Dépenses banque</h1><p>Journal des opérations bancaires — sorties et entrées (hors petite caisse)</p></div>
+    <div class="ph-r">
+      <button class="btn sm" onclick="exportExcel('depenses')">⬇ Excel</button>
+      <button class="btn prim" onclick="openMod('mo-dep',null)">+ Opération</button>
+    </div>
+  </div>
+  <div class="pb" id="dep-pb"></div>
+  <div class="kr" id="dep-kpis"></div>
+  <div class="card">
+    <div class="ch fb">
+      <h3>Journal bancaire</h3>
+      <div class="fr2">
+        <select class="sel" id="fil-dep-t" onchange="renderDep()" style="width:150px">
+          <option value="">Tous types</option>
+          <option value="SORTIE BANQUE">Sorties banque</option>
+          <option value="ENTREE BANQUE">Entrées banque</option>
+        </select>
+        <select class="sel" id="fil-dep-c" onchange="renderDep()" style="width:175px">
+          <option value="">Toutes catégories</option>
+          <option value="RESSOURCES HUMAINES">Ressources humaines</option>
+          <option value="MISSION">Mission</option>
+          <option value="HONORAIRES MISSIONS">Honoraires missions</option>
+          <option value="CHARGES D'EXPLOITATION">Exploitation</option>
+          <option value="FRAIS DE TENUE DE COMPTE">Frais bancaires</option>
+          <option value="A VOIR">À classer</option>
+        </select>
+        <select class="sel" id="fil-dep-n" onchange="renderDep()" style="width:130px">
+          <option value="">Prévu + Imprévu</option>
+          <option value="prevu">Prévu</option>
+          <option value="imprevu">Imprévu</option>
+        </select>
+      </div>
+    </div>
+    <div class="tw"><table><thead><tr>
+      <th>Date</th><th>Période</th><th>Type</th><th>Catégorie</th><th>Nature</th>
+      <th>Qualité / Désignation</th><th>Prestataire</th><th>Montant</th><th>Frais transf.</th><th>Pénalité</th><th>Référence</th><th>Doc</th><th></th>
+    </tr></thead><tbody id="dep-tbl"></tbody></table></div>
+  </div>
+</div>
+
+<!-- ██████ PETITE CAISSE ██████ -->
+<div class="pg" id="p-petite-caisse">
+  <div class="ph">
+    <div class="ph-l"><h1>Petite caisse</h1><p>Gestion séparée — numérotation automatique pour archivage physique</p></div>
+    <div class="ph-r">
+      <button class="btn sm" onclick="exportExcel('petite-caisse')">⬇ Excel</button>
+      <button class="btn prim" onclick="openMod('mo-pc',null)">+ Pièce de caisse</button>
+    </div>
+  </div>
+  <div class="kr" id="pc-kpis"></div>
+  <div class="pb" id="pc-pb"></div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch fb">
+      <h3>Registre petite caisse</h3>
+      <select class="sel" id="fil-pc-c" onchange="renderPC()" style="width:170px">
+        <option value="">Toutes caisses</option>
+        <option value="PRINCIPALE">Caisse principale</option>
+        <option value="BEN SOUDA">Caisse Ben Souda</option>
+      </select>
+    </div>
+    <div class="tw"><table><thead><tr>
+      <th>N° Pièce</th><th>Date</th><th>Caisse</th><th>Type</th><th>Catégorie</th>
+      <th>Nature</th><th>Désignation</th><th>Prestataire</th>
+      <th>Entrée</th><th>Sortie</th><th>Pénalité</th><th>Solde</th><th>Justificatif</th><th></th>
+    </tr></thead><tbody id="pc-tbl"></tbody></table></div>
+  </div>
+  <div class="card">
+    <div class="ch"><h3>Flux petite caisse par mois et par caisse</h3></div>
+    <div class="cb"><div class="cw" style="height:190px"><canvas id="ch-pc"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ██████ TRÉSORERIE ██████ -->
+<div class="pg" id="p-tresorerie">
+  <div class="ph">
+    <div class="ph-l"><h1>Trésorerie mensuelle</h1><p>Réel passé (Jan–Avr) + Projection (Mai–Déc) — Entrées vs Charges</p></div>
+    <div class="ph-r"><button class="btn sm" onclick="exportExcel('tresorerie')">⬇ Excel</button></div>
+  </div>
+  <div class="kr" id="tres-kpis"></div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch"><h3>Flux mensuel 2026 — Entrées missions vs Charges (réel + prévision)</h3></div>
+    <div class="cb"><div class="cw" style="height:240px"><canvas id="ch-tres"></canvas></div></div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch fb"><h3>Tableau mensuel — Données modifiables</h3><button class="btn sm" onclick="addTresMois()">+ Mois</button></div>
+    <div class="tw"><table><thead><tr>
+      <th>Mois</th><th>Type</th><th>Solde banque</th><th>Solde coffre</th>
+      <th>Entrées missions</th><th>Charges prévues</th><th>Charges payées</th>
+      <th>Reste à payer</th><th>BFR estimé</th><th></th>
+    </tr></thead>
+    <tbody id="tres-tbl"></tbody>
+    <tfoot><tr>
+      <td colspan="4" class="fw7" style="padding:7px 10px">TOTAL</td>
+      <td class="tnum fw7 tc" id="tres-te"></td>
+      <td class="tnum fw7 ac" id="tres-tc"></td>
+      <td class="tnum fw7 rc" id="tres-tcp"></td>
+      <td></td><td></td><td></td>
+    </tr></tfoot>
+    </table></div>
+  </div>
+  <div class="card">
+    <div class="ch"><h3>Trésorerie cumulée & Besoin de financement mensuel</h3></div>
+    <div class="cb"><div class="cw" style="height:210px"><canvas id="ch-tres2"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ██████ BFR ██████ -->
+<div class="pg" id="p-bfr">
+  <div class="ph">
+    <div class="ph-l"><h1>BFR Prévisionnel</h1><p>Intègre encaissements missions planifiés + charges + projection</p></div>
+    <div class="ph-r"><button class="btn sm" onclick="exportExcel('bfr')">⬇ Excel</button></div>
+  </div>
+  <div class="g2" style="margin-bottom:14px">
+    <div class="card">
+      <div class="ch"><h3>Paramètres de simulation</h3></div>
+      <div class="cb">
+        <div class="fg" style="grid-template-columns:1fr">
+          <div class="fr"><label class="lbl">Trésorerie initiale (FCFA)</label><input class="inp" id="bfr-t0" type="number" value="9500000" oninput="calcBFR()"></div>
+          <div class="fr"><label class="lbl">Charges fixes mensuelles (FCFA)</label><input class="inp" id="bfr-c" type="number" value="8295000" oninput="calcBFR()"></div>
+          <div class="fr"><label class="lbl">Revenus complémentaires (FCFA/mois)</label><input class="inp" id="bfr-rx" type="number" value="0" oninput="calcBFR()"></div>
+          <div class="fr"><label class="lbl">Horizon de projection</label>
+            <select class="sel" id="bfr-hor" onchange="calcBFR()">
+              <option value="3">3 mois</option><option value="6" selected>6 mois</option>
+              <option value="9">9 mois</option><option value="12">12 mois</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card"><div class="ch"><h3>Indicateurs clés</h3></div><div class="cb" id="bfr-ind"></div></div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch"><h3>Encaissements missions planifiés — modifiables par mois</h3></div>
+    <div class="tw"><table><thead><tr>
+      <th>Mission</th><th>Client</th><th>Total prévu</th>
+      <th>Jan</th><th>Fév</th><th>Mar</th><th>Avr</th><th>Mai</th><th>Jun</th>
+      <th>Jul</th><th>Aoû</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Déc</th>
+    </tr></thead>
+    <tbody id="bfr-m-tbl"></tbody>
+    <tfoot id="bfr-m-foot"></tfoot>
+    </table></div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch"><h3>Projection mensuelle — Tréso & BFR</h3></div>
+    <div class="cb"><div class="cw" style="height:240px"><canvas id="ch-bfr"></canvas></div></div>
+  </div>
+  <div class="card">
+    <div class="ch"><h3>Tableau de projection détaillé</h3></div>
+    <div class="tw"><table><thead><tr><th>Mois</th><th>Tréso début</th><th>Entrées</th><th>Charges</th><th>Tréso fin</th><th>BFR</th><th>Statut</th></tr></thead>
+    <tbody id="bfr-tbl"></tbody></table></div>
+  </div>
+</div>
+
+<!-- ██████ TVA ██████ -->
+<div class="pg" id="p-tva">
+  <div class="ph">
+    <div class="ph-l"><h1>TVA estimative</h1><p>TVA collectée sur missions assujetties — à titre indicatif (consulter votre expert-comptable DGI-CI)</p></div>
+    <div class="ph-r"><button class="btn sm" onclick="exportExcel('tva')">⬇ Excel</button></div>
+  </div>
+  <div class="kr" id="tva-kpis"></div>
+  <div class="g2" style="margin-bottom:14px">
+    <div class="card">
+      <div class="ch"><h3>TVA collectée par mission (taux 18%)</h3></div>
+      <div class="tw"><table><thead><tr><th>Mission</th><th>Client</th><th>Encaissé TTC</th><th>HT estimé</th><th>TVA 18%</th><th>Statut</th></tr></thead>
+      <tbody id="tva-tbl"></tbody></table></div>
+    </div>
+    <div class="card">
+      <div class="ch"><h3>Récapitulatif mensuel TVA</h3></div>
+      <div class="tw"><table><thead><tr><th>Mois</th><th>Entrées TTC</th><th>TVA estimée</th><th>Statut déclaration</th></tr></thead>
+      <tbody id="tva-m-tbl"></tbody></table></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="cb">
+      <div class="alert a">⚠ <span><strong>Important :</strong> Ces estimations sont indicatives uniquement. La TVA effective dépend de votre régime fiscal (réel ou simplifié), des encaissements constatés et des achats déductibles. Rapprochez-vous de votre expert-comptable pour les déclarations officielles auprès de la DGI Côte d'Ivoire.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ██████ PARAMÈTRES ██████ -->
+<div class="pg" id="p-parametres">
+  <div class="ph">
+    <div class="ph-l"><h1>Paramètres généraux</h1><p>Données issues des feuilles ⚙ Paramètres et ⚠ Suivi Arriérés du fichier Excel</p></div>
+    <div class="ph-r"><button class="btn sm" onclick="exportExcel('parametres')">⬇ Excel</button></div>
+  </div>
+  <div class="g2" style="margin-bottom:14px">
+    <div class="card">
+      <div class="ch"><h3>Trésorerie & Ressources humaines</h3></div>
+      <div class="cb">
+        <div class="fg" style="grid-template-columns:1fr">
+          <div class="fr"><label class="lbl">Solde compte bancaire (FCFA)</label><input class="inp" id="p-bq" type="number" value="9000000" oninput="syncP()"></div>
+          <div class="fr"><label class="lbl">Solde coffre-fort (FCFA)</label><input class="inp" id="p-cf" type="number" value="500000" oninput="syncP()"></div>
+          <div class="fr"><label class="lbl">Masse salariale brute mensuelle</label><input class="inp" id="p-ms" type="number" value="4980000" oninput="syncP()"></div>
+          <div class="fr"><label class="lbl">Charges patronales (% du brut)</label><input class="inp" id="p-cp" type="number" value="0" oninput="syncP()"></div>
+          <div class="fr"><label class="lbl">Primes mensuelles régulières</label><input class="inp" id="p-pm" type="number" value="0" oninput="syncP()"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><h3>Arriérés salaires & primes</h3></div>
+      <div class="cb">
+        <div class="fg" style="grid-template-columns:1fr">
+          <div class="fr"><label class="lbl">Arriéré salaires (cumul total dû)</label><input class="inp" id="p-as" type="number" value="3000000" oninput="syncP()"></div>
+          <div class="fr"><label class="lbl">Remboursé à ce jour</label><input class="inp" id="p-as-r" type="number" value="0" oninput="syncP()"></div>
+          <div class="fr"><label class="lbl">Mensualité de remboursement</label><input class="inp" id="p-as-m" type="number" value="1500000" oninput="syncP()"></div>
+          <div class="fr"><label class="lbl">Arriéré primes (cumul total dû)</label><input class="inp" id="p-ap" type="number" value="0" oninput="syncP()"></div>
+          <div class="fr"><label class="lbl">Mensualité remboursement primes</label><input class="inp" id="p-ap-m" type="number" value="0" oninput="syncP()"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch"><h3>Référentiel charges fixes (feuille ⚙ Paramètres)</h3></div>
+    <div class="tw"><table><thead><tr><th>Paramètre</th><th>Montant (FCFA)</th><th>Périodicité</th><th>Remarques</th></tr></thead>
+    <tbody id="param-tbl"></tbody></table></div>
+  </div>
+  <div class="card">
+    <div class="ch"><h3>Suivi arriérés (feuille ⚠ Suivi Arriérés)</h3></div>
+    <div class="tw"><table><thead><tr><th>Catégorie</th><th>Initial</th><th>Remboursé</th><th>Solde restant</th><th>Mensualité</th><th>Mois restants</th><th>% Apuré</th></tr></thead>
+    <tbody id="arr-tbl"></tbody></table></div>
+  </div>
+</div>
+
+</main><!-- /main -->
+</div><!-- /wrap -->
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- MISSION -->
+<div class="mbo" id="mo-mis">
+  <div class="mod" style="width:700px">
+    <div class="mh"><h3 id="mo-mis-title">Nouvelle mission</h3><button class="mx" onclick="closeMod('mo-mis')">×</button></div>
+    <div class="mbody">
+      <div class="fg">
+        <div class="fr full"><label class="lbl">Nom de la mission *</label><input class="inp" id="m-nom" placeholder="Ex : Transformation Poste 5.0"></div>
+        <div class="fr full"><label class="lbl">Client *</label><input class="inp" id="m-client" placeholder="Raison sociale ou nom du client"></div>
+        <div class="fr"><label class="lbl">Apporteur d'affaires</label>
+          <select class="sel" id="m-ap">
+            <option value="">— Interne —</option>
+            <option>HBS</option><option>TDA</option><option>TEZ</option><option>AFO</option><option>AUTRES</option>
+          </select>
+        </div>
+        <div class="fr"><label class="lbl">Étape pipeline</label>
+          <select class="sel" id="m-st">
+            <option value="prospect">Prospect</option><option value="tdr">TDR envoyé</option>
+            <option value="propale">Propale envoyée</option><option value="contrat">Contrat signé</option>
+            <option value="en_cours" selected>En cours</option><option value="termine">Terminé</option><option value="perdu">Perdu</option>
+          </select>
+        </div>
+        <div class="fr"><label class="lbl">Montant total HT (FCFA)</label><input class="inp" id="m-mnt" type="number" placeholder="0"></div>
+        <div class="fr"><label class="lbl">Avance reçue (FCFA)</label><input class="inp" id="m-av" type="number" value="0"></div>
+        <div class="fr"><label class="lbl">Date début</label><input class="inp" id="m-debut" type="date"></div>
+        <div class="fr"><label class="lbl">Date fin prévue</label><input class="inp" id="m-fin" type="date"></div>
+        <div class="fr"><label class="lbl">Type TVA</label>
+          <select class="sel" id="m-tva"><option value="exo">Exonéré</option><option value="18">TVA 18%</option></select>
+        </div>
+        <div class="fr"><label class="lbl">Nature</label>
+          <select class="sel" id="m-nature"><option value="prevu">Prévu</option><option value="imprevu">Imprévu</option></select>
+        </div>
+        <div class="fr full"><label class="lbl">Description / périmètre</label><textarea class="ta" id="m-desc"></textarea></div>
+        <div class="fr full">
+          <label class="lbl">Prévisions d'encaissement mensuelles (FCFA) — intégrées au BFR</label>
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-top:4px" id="m-enc-grid"></div>
+        </div>
+        <div class="fr full"><label class="lbl">Documents (TDR, propale, contrat, commande...)</label>
+          <div class="dz"><input type="file" accept=".pdf,image/*,.doc,.docx" multiple onchange="addDocs('m-docs-fl',this)">
+            <div class="dz-ic">📎</div><div style="font-size:12px">Déposer ou scanner les documents</div>
+          </div>
+          <div class="flist" id="m-docs-fl"></div>
+        </div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn" onclick="closeMod('mo-mis')">Annuler</button><button class="btn prim" onclick="saveMission()">Enregistrer la mission</button></div>
+  </div>
+</div>
+
+<!-- FACTURE -->
+<div class="mbo" id="mo-fac">
+  <div class="mod">
+    <div class="mh"><h3>Nouvelle facture</h3><button class="mx" onclick="closeMod('mo-fac')">×</button></div>
+    <div class="mbody">
+      <div class="fg">
+        <div class="fr full"><label class="lbl">Mission liée *</label>
+          <select class="sel" id="fac-mis" onchange="fillFacMis()"></select>
+        </div>
+        <div class="fr"><label class="lbl">N° Facture</label><input class="inp" id="fac-num" placeholder="FAC-2026-001"></div>
+        <div class="fr"><label class="lbl">Date émission</label><input class="inp" id="fac-date" type="date"></div>
+        <div class="fr"><label class="lbl">Montant HT (FCFA)</label><input class="inp" id="fac-ht" type="number" oninput="calcTTC()"></div>
+        <div class="fr"><label class="lbl">Type TVA</label>
+          <select class="sel" id="fac-tva" onchange="calcTTC()"><option value="exo">Exonéré</option><option value="18">TVA 18%</option></select>
+        </div>
+        <div class="fr"><label class="lbl">Montant TVA</label><input class="inp" id="fac-tva-m" readonly placeholder="Auto"></div>
+        <div class="fr"><label class="lbl">Montant TTC</label><input class="inp" id="fac-ttc" readonly placeholder="Auto"></div>
+        <div class="fr"><label class="lbl">Nombre de tranches</label>
+          <input class="inp" id="fac-nb" type="number" value="1" min="1" max="12" oninput="buildTranches()">
+        </div>
+        <div class="fr full" id="fac-tranches-zone"></div>
+        <div class="fr full"><label class="lbl">Facture PDF/scan</label>
+          <div class="dz"><input type="file" accept=".pdf,image/*" onchange="addDocs('fac-doc-fl',this)">
+            <div class="dz-ic">📄</div><div style="font-size:12px">Joindre la facture numérisée</div>
+          </div>
+          <div class="flist" id="fac-doc-fl"></div>
+        </div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn" onclick="closeMod('mo-fac')">Annuler</button><button class="btn prim" onclick="saveFacture()">Enregistrer</button></div>
+  </div>
+</div>
+
+<!-- STAFF -->
+<div class="mbo" id="mo-staff">
+  <div class="mod">
+    <div class="mh"><h3 id="mo-staff-title">Nouveau collaborateur</h3><button class="mx" onclick="closeMod('mo-staff')">×</button></div>
+    <div class="mbody">
+      <div class="fg">
+        <div class="fr full"><label class="lbl">Nom & Prénom *</label><input class="inp" id="s-nom" placeholder="NOM Prénom"></div>
+        <div class="fr full"><label class="lbl">Poste *</label><input class="inp" id="s-poste"></div>
+        <div class="fr"><label class="lbl">Salaire base (FCFA)</label><input class="inp" id="s-sal" type="number"></div>
+        <div class="fr"><label class="lbl">Nature contrat</label>
+          <select class="sel" id="s-nature"><option>CDI</option><option>CDD</option><option>Stage</option><option>Consultant</option></select>
+        </div>
+        <div class="fr"><label class="lbl">Date début contrat</label><input class="inp" id="s-debut" type="date"></div>
+        <div class="fr"><label class="lbl">Date fin contrat</label><input class="inp" id="s-fin" type="date"></div>
+        <div class="fr full" style="flex-direction:row;gap:20px;margin-top:4px">
+          <label class="tgw"><span class="tg"><input type="checkbox" id="s-marabu" checked><span class="tgs"></span></span><span style="font-size:12px">Payé par Marabu</span></label>
+          <label class="tgw"><span class="tg"><input type="checkbox" id="s-actif" checked><span class="tgs"></span></span><span style="font-size:12px">Collaborateur actif</span></label>
+        </div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn" onclick="closeMod('mo-staff')">Annuler</button><button class="btn prim" onclick="saveStaff()">Enregistrer</button></div>
+  </div>
+</div>
+
+<!-- CHARGE -->
+<div class="mbo" id="mo-chg">
+  <div class="mod">
+    <div class="mh"><h3 id="mo-chg-title">Nouveau poste de charge</h3><button class="mx" onclick="closeMod('mo-chg')">×</button></div>
+    <div class="mbody">
+      <div class="fg">
+        <div class="fr full"><label class="lbl">Libellé du poste *</label><input class="inp" id="c-lib" placeholder="Ex : Loyer bureaux"></div>
+        <div class="fr"><label class="lbl">Catégorie</label>
+          <select class="sel" id="c-cat">
+            <option value="RH">Ressources humaines</option><option value="EXPLOIT">Exploitation</option>
+            <option value="UTIL">Utilités & consommables</option><option value="VAR">Variable courante</option>
+          </select>
+        </div>
+        <div class="fr"><label class="lbl">Nature</label>
+          <select class="sel" id="c-nature"><option value="fixe">Charge fixe</option><option value="variable">Charge variable</option></select>
+        </div>
+        <div class="fr"><label class="lbl">Type</label>
+          <select class="sel" id="c-type"><option value="prevu">Prévu</option><option value="imprevu">Imprévu</option></select>
+        </div>
+        <div class="fr"><label class="lbl">Montant mensuel budget (FCFA)</label><input class="inp" id="c-mnt" type="number" value="0"></div>
+        <div class="fr"><label class="lbl">Périodicité</label>
+          <select class="sel" id="c-per">
+            <option>Mensuelle</option><option>Trimestrielle</option><option>Annuelle</option><option>Ponctuelle</option>
+          </select>
+        </div>
+        <div class="fr full"><label class="lbl">Observations</label><textarea class="ta" id="c-obs"></textarea></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn" onclick="closeMod('mo-chg')">Annuler</button><button class="btn prim" onclick="saveChg()">Enregistrer</button></div>
+  </div>
+</div>
+
+<!-- DEPENSE -->
+<div class="mbo" id="mo-dep">
+  <div class="mod">
+    <div class="mh"><h3>Nouvelle opération bancaire</h3><button class="mx" onclick="closeMod('mo-dep')">×</button></div>
+    <div class="mbody">
+      <div class="fg">
+        <div class="fr"><label class="lbl">Type *</label>
+          <select class="sel" id="d-type">
+            <option value="SORTIE BANQUE">Sortie banque</option><option value="ENTREE BANQUE">Entrée banque</option>
+          </select>
+        </div>
+        <div class="fr"><label class="lbl">Catégorie</label>
+          <select class="sel" id="d-cat">
+            <option value="RESSOURCES HUMAINES">Ressources humaines</option>
+            <option value="MISSION">Mission</option>
+            <option value="HONORAIRES MISSIONS">Honoraires missions</option>
+            <option value="CHARGES D'EXPLOITATION">Charges exploitation</option>
+            <option value="FRAIS DE TENUE DE COMPTE">Frais bancaires</option>
+            <option value="A VOIR">À classer</option>
+          </select>
+        </div>
+        <div class="fr"><label class="lbl">Nature</label>
+          <select class="sel" id="d-nature"><option value="prevu">Prévu</option><option value="imprevu">Imprévu</option></select>
+        </div>
+        <div class="fr"><label class="lbl">Période</label>
+          <select class="sel" id="d-per">
+            <option>JANVIER</option><option>FEVRIER</option><option>MARS</option><option selected>AVRIL</option>
+            <option>MAI</option><option>JUIN</option><option>JUILLET</option><option>AOUT</option>
+            <option>SEPTEMBRE</option><option>OCTOBRE</option><option>NOVEMBRE</option><option>DECEMBRE</option>
+          </select>
+        </div>
+        <div class="fr"><label class="lbl">Date *</label><input class="inp" id="d-date" type="date"></div>
+        <div class="fr"><label class="lbl">Intitulé</label><input class="inp" id="d-int" placeholder="Ex: VIREMENT BANCAIRE"></div>
+        <div class="fr full"><label class="lbl">Désignation / Description *</label><input class="inp" id="d-des"></div>
+        <div class="fr"><label class="lbl">Prestataire / Bénéficiaire</label><input class="inp" id="d-prest"></div>
+        <div class="fr"><label class="lbl">Montant (FCFA) *</label><input class="inp" id="d-mnt" type="number"></div>
+        <div class="fr"><label class="lbl">Frais de transfert</label><input class="inp" id="d-ft" type="number" value="0"></div>
+        <div class="fr"><label class="lbl">Pénalité</label><input class="inp" id="d-pen" type="number" value="0"></div>
+        <div class="fr"><label class="lbl">Référence / Bordereau</label><input class="inp" id="d-ref"></div>
+        <div class="fr full"><label class="lbl">Pièce justificative</label>
+          <div class="dz"><input type="file" accept=".pdf,image/*" onchange="addDocs('d-doc-fl',this)">
+            <div class="dz-ic">📎</div><div style="font-size:12px">Joindre le justificatif</div>
+          </div>
+          <div class="flist" id="d-doc-fl"></div>
+        </div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn" onclick="closeMod('mo-dep')">Annuler</button><button class="btn prim" onclick="saveDep()">Enregistrer</button></div>
+  </div>
+</div>
+
+<!-- PETITE CAISSE -->
+<div class="mbo" id="mo-pc">
+  <div class="mod">
+    <div class="mh"><h3>Nouvelle pièce de caisse</h3><button class="mx" onclick="closeMod('mo-pc')">×</button></div>
+    <div class="mbody">
+      <div class="fg">
+        <div class="fr"><label class="lbl">Caisse</label>
+          <select class="sel" id="pc-caisse"><option value="PRINCIPALE">Caisse principale</option><option value="BEN SOUDA">Caisse Ben Souda</option></select>
+        </div>
+        <div class="fr"><label class="lbl">Type</label>
+          <select class="sel" id="pc-type"><option value="entree">Entrée</option><option value="sortie">Sortie</option></select>
+        </div>
+        <div class="fr"><label class="lbl">Catégorie</label>
+          <select class="sel" id="pc-cat">
+            <option value="CHARGES D'EXPLOITATION">Exploitation</option>
+            <option value="RESSOURCES HUMAINES">Ressources humaines</option>
+            <option value="HONORAIRES MISSIONS">Honoraires missions</option>
+            <option value="AUTRE">Autre</option>
+          </select>
+        </div>
+        <div class="fr"><label class="lbl">Nature</label>
+          <select class="sel" id="pc-nature"><option value="prevu">Prévu</option><option value="imprevu">Imprévu</option></select>
+        </div>
+        <div class="fr"><label class="lbl">Date *</label><input class="inp" id="pc-date" type="date"></div>
+        <div class="fr"><label class="lbl">Période</label>
+          <select class="sel" id="pc-per">
+            <option>JANVIER</option><option>FEVRIER</option><option>MARS</option><option selected>AVRIL</option>
+            <option>MAI</option><option>JUIN</option><option>JUILLET</option><option>AOUT</option>
+          </select>
+        </div>
+        <div class="fr full"><label class="lbl">Désignation *</label><input class="inp" id="pc-des"></div>
+        <div class="fr"><label class="lbl">Prestataire / Fournisseur</label><input class="inp" id="pc-prest"></div>
+        <div class="fr"><label class="lbl">Montant (FCFA) *</label><input class="inp" id="pc-mnt" type="number"></div>
+        <div class="fr"><label class="lbl">Pénalité</label><input class="inp" id="pc-pen" type="number" value="0"></div>
+        <div class="fr full"><label class="lbl">Pièce justificative (reçu, bon, facture...)</label>
+          <div class="dz"><input type="file" accept=".pdf,image/*" onchange="addDocs('pc-doc-fl',this)">
+            <div class="dz-ic">🧾</div><div style="font-size:12px">Scanner le reçu ou la facture</div>
+          </div>
+          <div class="flist" id="pc-doc-fl"></div>
+        </div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn" onclick="closeMod('mo-pc')">Annuler</button><button class="btn prim" onclick="savePc()">Enregistrer</button></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+//  CONSTANTS & HELPERS
+// ══════════════════════════════════════════════════════════════════
+const MF = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const MK = ['jan','fev','mar','avr','mai','jun','jul','aou','sep','oct','nov','dec'];
+const fmt = n => n==null?'—':Math.round(n).toLocaleString('fr-FR');
+const fmtS = n => n>=0?'+'+fmt(n):'-'+fmt(-n);
+const $  = id => document.getElementById(id);
+const $v = id => { const e=$(id); return e?e.value:''; };
+const initials = s => (s||'').trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+const CHARTS = {};
+const destroyC = id => { if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];} };
+
+const ST_LABEL = {prospect:'Prospect',tdr:'TDR envoyé',propale:'Propale',contrat:'Contrat',en_cours:'En cours',termine:'Terminé',perdu:'Perdu'};
+const ST_CLS   = {prospect:'bp',tdr:'bb',propale:'ba',contrat:'bp',en_cours:'bg',termine:'bn',perdu:'br'};
+const CAT_LBL  = {RH:'Ressources humaines',EXPLOIT:'Exploitation',UTIL:'Utilités',VAR:'Variable'};
+
+// ══════════════════════════════════════════════════════════════════
+//  DATABASE
+// ══════════════════════════════════════════════════════════════════
+const DB = {
+params: {banque:9000000,coffre:500000,masse_sal:4980000,charges_pat:0,primes_mens:0,arr_sal:3000000,arr_sal_r:0,arr_sal_m:1500000,arr_prim:0,arr_prim_m:0},
+
+staff: [
+  {id:1,nom:'TOURE HERVE',poste:'Consultant chargé des moyens généraux',sal:350000,nature:'Consultant',debut:'2024-01-05',fin:'2026-04-30',marabu:true,actif:true,
+   paie:{jan:350000,fev:null,mar:350000,avr:350000,mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   statut:{jan:'Payé',fev:null,mar:'Payé',avr:'Payé',mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null}},
+  {id:2,nom:'OUATTARA ISSOUF',poste:"Consultant senior développement d'applications",sal:350000,nature:'Consultant',debut:'2025-02-03',fin:'2025-08-31',marabu:true,actif:true,
+   paie:{jan:350000,fev:null,mar:350000,avr:350000,mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   statut:{jan:'Payé',fev:null,mar:'Payé',avr:'Payé',mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null}},
+  {id:3,nom:'KIMANA MISAGO',poste:'Team leader',sal:360000,nature:'Consultant',debut:'2025-02-03',fin:'Indéterminé',marabu:false,actif:true,
+   paie:{jan:null,fev:null,mar:360000,avr:360000,mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   statut:{jan:null,fev:null,mar:'Payé',avr:'Payé',mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null}},
+  {id:4,nom:'AKA GUY MARCEL',poste:'Consultant senior gestion & finance',sal:500000,nature:'Consultant',debut:'2025-05-15',fin:'2026-05-15',marabu:true,actif:true,
+   paie:{jan:500000,fev:null,mar:500000,avr:500000,mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   statut:{jan:'Payé',fev:null,mar:'Payé',avr:'Payé',mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null}},
+  {id:5,nom:'DOGBO GILLES',poste:'Consultant',sal:500000,nature:'Consultant',debut:'2025-01-28',fin:'2026-05-31',marabu:true,actif:true,
+   paie:{jan:500000,fev:null,mar:500000,avr:500000,mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   statut:{jan:'Payé',fev:null,mar:'Payé',avr:'Payé',mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null}},
+  {id:6,nom:'NDIAYE PENDA',poste:'Directeur commercial & marketing',sal:570000,nature:'CDI',debut:'2026-01-01',fin:'2027-01-31',marabu:true,actif:true,
+   paie:{jan:null,fev:500000,mar:500000,avr:null,mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   statut:{jan:null,fev:'Payé',mar:'Payé',avr:null,mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null}},
+  {id:7,nom:'EZOUA TEDDY',poste:'Directeur associé PMO',sal:500000,nature:'Consultant',debut:'2026-03-31',fin:'2027-03-30',marabu:false,actif:true,
+   paie:{jan:null,fev:null,mar:null,avr:500000,mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   statut:{jan:null,fev:null,mar:null,avr:'Payé',mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null}},
+  {id:8,nom:'BROU BRICE',poste:'Directeur communication',sal:500000,nature:'Consultant',debut:'',fin:'',marabu:false,actif:true,
+   paie:{jan:null,fev:null,mar:null,avr:500000,mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   statut:{jan:null,fev:null,mar:null,avr:'Payé',mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null}},
+  {id:9,nom:'OUATTARA AIDA',poste:'Directeur associé COO',sal:500000,nature:'CDI',debut:'2026-09-20',fin:'2027-10-19',marabu:false,actif:true,
+   paie:{jan:null,fev:null,mar:null,avr:500000,mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   statut:{jan:null,fev:null,mar:null,avr:'Payé',mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null}},
+  {id:10,nom:'TANOH THIERRY',poste:'Consultant junior',sal:250000,nature:'Consultant',debut:'',fin:'',marabu:true,actif:true,
+   paie:{jan:250000,fev:null,mar:250000,avr:250000,mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   statut:{jan:'Payé',fev:null,mar:'Payé',avr:'Payé',mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null}},
+  {id:11,nom:'COULIBALY SOULEYMANE',poste:'Consultant',sal:250000,nature:'Consultant',debut:'',fin:'',marabu:true,actif:true,
+   paie:{jan:null,fev:250000,mar:250000,avr:250000,mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   statut:{jan:null,fev:'Payé',mar:'Payé',avr:'Payé',mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null}},
+  {id:12,nom:'DIOP KALIL RAHIM',poste:'Stagiaire',sal:100000,nature:'Stage',debut:'',fin:'',marabu:true,actif:true,
+   paie:{jan:null,fev:null,mar:100000,avr:100000,mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   statut:{jan:null,fev:null,mar:'Payé',avr:'Payé',mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null}},
+  {id:13,nom:'DOUMBIA MOHAMED',poste:'Stagiaire data',sal:100000,nature:'Stage',debut:'',fin:'',marabu:true,actif:true,
+   paie:{jan:null,fev:null,mar:100000,avr:100000,mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   statut:{jan:null,fev:null,mar:'Payé',avr:'Payé',mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null}},
+  {id:14,nom:'KADIDIATOU',poste:'Assistante de direction',sal:100000,nature:'CDD',debut:'',fin:'',marabu:true,actif:true,
+   paie:{jan:null,fev:null,mar:100000,avr:100000,mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   statut:{jan:null,fev:null,mar:'Payé',avr:'Payé',mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null}},
+  {id:15,nom:'NAFI',poste:'Ménage',sal:50000,nature:'CDD',debut:'',fin:'',marabu:true,actif:true,
+   paie:{jan:null,fev:null,mar:null,avr:50000,mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   statut:{jan:null,fev:null,mar:null,avr:'Payé',mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null}},
+],
+
+missions: [
+  {id:1,nom:'Transformation Poste 5.0',client:'LA POSTE CI',apporteur:'TEZ',statut:'en_cours',montant:20000000,avance:20000000,debut:'2026-04-17',fin:'2026-12-31',tva:'18',nature:'prevu',desc:'Assistance stratégique et pilotage opérationnel de la transformation Poste 5.0',docs:[],
+   enc:{jan:0,fev:0,mar:0,avr:20000000,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0}},
+  {id:2,nom:'Data plateforme sécurisée',client:'Client confidentiel',apporteur:'HBS',statut:'en_cours',montant:15750000,avance:15750000,debut:'2026-04-17',fin:'2026-10-31',tva:'18',nature:'prevu',desc:"Mise en œuvre d'une data plateforme sécurisée et évolutive",docs:[],
+   enc:{jan:0,fev:0,mar:0,avr:15750000,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0}},
+  {id:3,nom:'Structuration GD Couverture',client:'GD COUVERTURE',apporteur:'AFO',statut:'en_cours',montant:4300000,avance:4280119,debut:'2026-03-30',fin:'2026-09-30',tva:'exo',nature:'prevu',desc:"Accompagnement à la structuration et au développement d'entreprise",docs:[],
+   enc:{jan:0,fev:0,mar:0,avr:4280119,mai:19881,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0}},
+  {id:4,nom:'Mission GUCE-CI / Ocean Core',client:'GUCE-CI',apporteur:'TDA',statut:'en_cours',montant:3000000,avance:1000000,debut:'2026-01-01',fin:'2026-06-30',tva:'exo',nature:'prevu',desc:'Mission KIMANA — GUCE-CI et Ocean Core (honoraires)',docs:[],
+   enc:{jan:0,fev:0,mar:0,avr:1000000,mai:1000000,jun:1000000,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0}},
+],
+
+factures: [
+  {id:1,mis_id:1,num:'FAC-2026-001',date:'2026-04-17',ht:16949153,tva_t:'18',tva_m:3050847,ttc:20000000,docs:[],
+   tranches:[{id:1,num:1,mnt:20000000,ech:'2026-04-17',enc:20000000,date_enc:'2026-04-17',ref:'Virement bancaire Poste 5.0',statut:'Payé',docs:[]}]},
+  {id:2,mis_id:2,num:'FAC-2026-002',date:'2026-04-17',ht:13347458,tva_t:'18',tva_m:2402542,ttc:15750000,docs:[],
+   tranches:[{id:1,num:1,mnt:15750000,ech:'2026-04-17',enc:15750000,date_enc:'2026-04-17',ref:'Sous-traitance data plateforme',statut:'Payé',docs:[]}]},
+  {id:3,mis_id:3,num:'FAC-2026-003',date:'2026-03-30',ht:4300000,tva_t:'exo',tva_m:0,ttc:4300000,docs:[],
+   tranches:[
+     {id:1,num:1,mnt:4280119,ech:'2026-04-03',enc:4280119,date_enc:'2026-04-03',ref:'2300595J26000000009',statut:'Payé',docs:[]},
+     {id:2,num:2,mnt:19881,ech:'2026-06-30',enc:0,date_enc:'',ref:'',statut:'En attente',docs:[]},
+   ]},
+],
+
+charges: [
+  {id:1,lib:'Salaires bruts',cat:'RH',nature:'fixe',type:'prevu',per:'Mensuelle',budget:4980000,obs:'Masse salariale complète',
+   r:{jan:3000000,fev:750000,mar:3060000,avr:4410000,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:'Partiellement payé',fev:'Partiellement payé',mar:'Partiellement payé',avr:'Partiellement payé',mai:'À payer',jun:'À payer',jul:'À payer',aou:'À payer',sep:'À payer',oct:'À payer',nov:'À payer',dec:'À payer'},
+   dp:{jan:'',fev:'',mar:'',avr:'',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+  {id:2,lib:'Remb. arriéré salaires',cat:'RH',nature:'fixe',type:'prevu',per:'Mensuelle',budget:1500000,obs:'Apurement arriéré',
+   r:{jan:0,fev:0,mar:0,avr:0,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:'À payer',fev:'À payer',mar:'À payer',avr:'À payer',mai:'À payer',jun:'À payer',jul:'À payer',aou:'À payer',sep:'À payer',oct:'À payer',nov:'À payer',dec:'À payer'},
+   dp:{jan:'',fev:'',mar:'',avr:'',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+  {id:3,lib:'Loyer (locaux)',cat:'EXPLOIT',nature:'fixe',type:'prevu',per:'Trimestrielle',budget:3300000,obs:'Périodicité trimestrielle — 1 100 000/mois linéarisé',
+   r:{jan:0,fev:0,mar:0,avr:0,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:'À payer',fev:'À payer',mar:'À payer',avr:'À payer',mai:'À payer',jun:'À payer',jul:'À payer',aou:'À payer',sep:'À payer',oct:'À payer',nov:'À payer',dec:'À payer'},
+   dp:{jan:'',fev:'',mar:'',avr:'',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+  {id:4,lib:'Carburant véhicules',cat:'EXPLOIT',nature:'variable',type:'prevu',per:'Mensuelle',budget:200000,obs:'Parc auto — Corlay / Total',
+   r:{jan:0,fev:0,mar:0,avr:30000,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:'À payer',fev:'À payer',mar:'À payer',avr:'Partiellement payé',mai:'À payer',jun:'À payer',jul:'À payer',aou:'À payer',sep:'À payer',oct:'À payer',nov:'À payer',dec:'À payer'},
+   dp:{jan:'',fev:'',mar:'',avr:'2026-04-14',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+  {id:5,lib:'Entretien véhicules & équip.',cat:'EXPLOIT',nature:'variable',type:'prevu',per:'Mensuelle',budget:100000,obs:'Révisions, pièces de rechange',
+   r:{jan:100000,fev:0,mar:0,avr:0,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:'Payé',fev:'À payer',mar:'À payer',avr:'À payer',mai:'À payer',jun:'À payer',jul:'À payer',aou:'À payer',sep:'À payer',oct:'À payer',nov:'À payer',dec:'À payer'},
+   dp:{jan:'',fev:'',mar:'',avr:'',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+  {id:6,lib:'Fournitures de bureau',cat:'EXPLOIT',nature:'variable',type:'prevu',per:'Mensuelle',budget:100000,obs:'Papier, cartouches, stylos',
+   r:{jan:0,fev:0,mar:0,avr:0,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:'À payer',fev:'À payer',mar:'À payer',avr:'À payer',mai:'À payer',jun:'À payer',jul:'À payer',aou:'À payer',sep:'À payer',oct:'À payer',nov:'À payer',dec:'À payer'},
+   dp:{jan:'',fev:'',mar:'',avr:'',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+  {id:7,lib:'Téléphonie & internet',cat:'EXPLOIT',nature:'fixe',type:'prevu',per:'Mensuelle',budget:50000,obs:'Abonnements opérateurs',
+   r:{jan:0,fev:0,mar:0,avr:0,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:'À payer',fev:'À payer',mar:'À payer',avr:'À payer',mai:'À payer',jun:'À payer',jul:'À payer',aou:'À payer',sep:'À payer',oct:'À payer',nov:'À payer',dec:'À payer'},
+   dp:{jan:'',fev:'',mar:'',avr:'',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+  {id:8,lib:'Abonnement logiciels',cat:'EXPLOIT',nature:'fixe',type:'prevu',per:'Mensuelle',budget:450000,obs:'',
+   r:{jan:0,fev:0,mar:0,avr:0,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:'À payer',fev:'À payer',mar:'À payer',avr:'À payer',mai:'À payer',jun:'À payer',jul:'À payer',aou:'À payer',sep:'À payer',oct:'À payer',nov:'À payer',dec:'À payer'},
+   dp:{jan:'',fev:'',mar:'',avr:'',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+  {id:9,lib:'CIE – Électricité',cat:'UTIL',nature:'variable',type:'prevu',per:'Mensuelle',budget:160000,obs:'Factures nov/déc 25 + jan 26 soldées en avril',
+   r:{jan:0,fev:0,mar:0,avr:293625,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:'À payer',fev:'À payer',mar:'À payer',avr:'Payé',mai:'À payer',jun:'À payer',jul:'À payer',aou:'À payer',sep:'À payer',oct:'À payer',nov:'À payer',dec:'À payer'},
+   dp:{jan:'',fev:'',mar:'',avr:'2026-04-14',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+  {id:10,lib:'SODECI – Eau',cat:'UTIL',nature:'variable',type:'prevu',per:'Mensuelle',budget:10000,obs:'Factures nov/déc 25 + jan 26',
+   r:{jan:0,fev:0,mar:0,avr:13901,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:'À payer',fev:'À payer',mar:'À payer',avr:'Payé',mai:'À payer',jun:'À payer',jul:'À payer',aou:'À payer',sep:'À payer',oct:'À payer',nov:'À payer',dec:'À payer'},
+   dp:{jan:'',fev:'',mar:'',avr:'2026-04-20',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+  {id:11,lib:'Eau en bonbonnes',cat:'UTIL',nature:'variable',type:'prevu',per:'Mensuelle',budget:30000,obs:'Usage bureau',
+   r:{jan:0,fev:0,mar:0,avr:10000,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:'À payer',fev:'À payer',mar:'À payer',avr:'Payé',mai:'À payer',jun:'À payer',jul:'À payer',aou:'À payer',sep:'À payer',oct:'À payer',nov:'À payer',dec:'À payer'},
+   dp:{jan:'',fev:'',mar:'',avr:'2026-04-14',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+  {id:12,lib:'Café',cat:'UTIL',nature:'variable',type:'prevu',per:'Mensuelle',budget:50000,obs:'',
+   r:{jan:0,fev:0,mar:0,avr:0,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:'À payer',fev:'À payer',mar:'À payer',avr:'À payer',mai:'À payer',jun:'À payer',jul:'À payer',aou:'À payer',sep:'À payer',oct:'À payer',nov:'À payer',dec:'À payer'},
+   dp:{jan:'',fev:'',mar:'',avr:'',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+  {id:13,lib:'Thé',cat:'UTIL',nature:'variable',type:'prevu',per:'Mensuelle',budget:10000,obs:'',
+   r:{jan:0,fev:0,mar:0,avr:0,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:'À payer',fev:'À payer',mar:'À payer',avr:'À payer',mai:'À payer',jun:'À payer',jul:'À payer',aou:'À payer',sep:'À payer',oct:'À payer',nov:'À payer',dec:'À payer'},
+   dp:{jan:'',fev:'',mar:'',avr:'',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+  {id:14,lib:'Sucre, lait & consommables',cat:'UTIL',nature:'variable',type:'prevu',per:'Mensuelle',budget:5000,obs:'Pause café',
+   r:{jan:0,fev:0,mar:0,avr:0,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:'À payer',fev:'À payer',mar:'À payer',avr:'À payer',mai:'À payer',jun:'À payer',jul:'À payer',aou:'À payer',sep:'À payer',oct:'À payer',nov:'À payer',dec:'À payer'},
+   dp:{jan:'',fev:'',mar:'',avr:'',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+  {id:15,lib:'Frais bancaires & agios',cat:'EXPLOIT',nature:'fixe',type:'prevu',per:'Mensuelle',budget:25000,obs:'Agios + frais fixes + Mansa online',
+   r:{jan:24750,fev:24750,mar:24750,avr:24750,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:'Payé',fev:'Payé',mar:'Payé',avr:'Payé',mai:'À payer',jun:'À payer',jul:'À payer',aou:'À payer',sep:'À payer',oct:'À payer',nov:'À payer',dec:'À payer'},
+   dp:{jan:'2026-01-30',fev:'2026-02-27',mar:'2026-03-31',avr:'2026-03-31',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+  {id:16,lib:'Honoraires missions (KIMANA)',cat:'VAR',nature:'variable',type:'prevu',per:'Mensuelle',budget:0,obs:'Arrierés jan-fév + missions mar-avr GUCE-CI',
+   r:{jan:0,fev:0,mar:0,avr:1000000,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:null,fev:null,mar:null,avr:'Payé',mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   dp:{jan:'',fev:'',mar:'',avr:'2026-04-17',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+  {id:17,lib:'Honoraires BEN SOUDA',cat:'VAR',nature:'variable',type:'prevu',per:'Mensuelle',budget:0,obs:'Honoraires poste Poste 5.0',
+   r:{jan:0,fev:0,mar:0,avr:2746268,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:null,fev:null,mar:null,avr:'Payé',mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   dp:{jan:'',fev:'',mar:'',avr:'2026-04-17',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+  {id:18,lib:'Honoraires DABADIE Thomas',cat:'VAR',nature:'variable',type:'prevu',per:'Mensuelle',budget:0,obs:'',
+   r:{jan:0,fev:0,mar:0,avr:2449254,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:null,fev:null,mar:null,avr:'Payé',mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   dp:{jan:'',fev:'',mar:'',avr:'2026-04-20',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+  {id:19,lib:'Honoraires EZOUA TEDDY',cat:'VAR',nature:'variable',type:'prevu',per:'Mensuelle',budget:0,obs:'',
+   r:{jan:0,fev:0,mar:0,avr:1611940,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:null,fev:null,mar:null,avr:'Payé',mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   dp:{jan:'',fev:'',mar:'',avr:'2026-04-17',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+  {id:20,lib:'Aménagement bureau',cat:'EXPLOIT',nature:'fixe',type:'imprevu',per:'Ponctuelle',budget:0,obs:'4 tables + 3 chaises — Facture 03573948',
+   r:{jan:0,fev:0,mar:0,avr:300000,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:null,fev:null,mar:null,avr:'Partiellement payé',mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   dp:{jan:'',fev:'',mar:'',avr:'2026-04-13',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+  {id:21,lib:'Réparation électricité',cat:'EXPLOIT',nature:'fixe',type:'imprevu',per:'Ponctuelle',budget:0,obs:'Avance 100 000 — Facture 6273413',
+   r:{jan:0,fev:0,mar:0,avr:225000,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:null,fev:null,mar:null,avr:'Partiellement payé',mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   dp:{jan:'',fev:'',mar:'',avr:'2026-04-13',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+  {id:22,lib:'Entretien climatiseurs',cat:'EXPLOIT',nature:'variable',type:'imprevu',per:'Ponctuelle',budget:0,obs:'',
+   r:{jan:0,fev:0,mar:0,avr:50000,mai:0,jun:0,jul:0,aou:0,sep:0,oct:0,nov:0,dec:0},
+   st:{jan:null,fev:null,mar:null,avr:'Payé',mai:null,jun:null,jul:null,aou:null,sep:null,oct:null,nov:null,dec:null},
+   dp:{jan:'',fev:'',mar:'',avr:'2026-04-14',mai:'',jun:'',jul:'',aou:'',sep:'',oct:'',nov:'',dec:''}},
+],
+
+depenses: [
+  {id:1,type:'ENTREE BANQUE',cat:'',per:'',int:'SOLDE INITIAL',date:'2025-12-31',des:'Solde initial au 31/12/2025',prest:'',mnt:0,credit:1254288,debit:0,ft:0,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:2,type:'SORTIE BANQUE',cat:'A VOIR',per:'JANVIER',int:'VIREMENT BANCAIRE',date:'2026-01-16',des:'Virement BEN SOUDA',prest:'Ben Souda',mnt:500000,credit:0,debit:503300,ft:3300,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:3,type:'ENTREE BANQUE',cat:'MISSION',per:'JANVIER',int:'VERSEMENT CAISSE',date:'2026-01-19',des:'Versement caisse Diawara Fousseni',prest:'Diawara Fousseni',mnt:1770000,credit:1770000,debit:0,ft:0,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:4,type:'SORTIE BANQUE',cat:'A VOIR',per:'JANVIER',int:'VIREMENT BANCAIRE',date:'2026-01-19',des:'Virement BEN SOUDA',prest:'Ben Souda',mnt:700000,credit:0,debit:703300,ft:3300,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:5,type:'SORTIE BANQUE',cat:'A VOIR',per:'JANVIER',int:'VIREMENT BANCAIRE',date:'2026-01-20',des:'Virement BEN SOUDA',prest:'Ben Souda',mnt:700000,credit:0,debit:703300,ft:3300,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:6,type:'SORTIE BANQUE',cat:'RESSOURCES HUMAINES',per:'JANVIER',int:'VIREMENT BANCAIRE',date:'2026-01-20',des:'Salaires Tanoh, Ouattara Issouf, Touré Hervé',prest:'',mnt:950000,credit:0,debit:959900,ft:9900,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:7,type:'ENTREE BANQUE',cat:'MISSION',per:'JANVIER',int:'DEPOT CHEQUE',date:'2026-01-21',des:'Bordereau n°0102760',prest:'',mnt:106200,credit:106200,debit:0,ft:0,pen:0,ref:'0102760',nature:'prevu',doc:[]},
+  {id:8,type:'ENTREE BANQUE',cat:'MISSION',per:'JANVIER',int:'DEPOT CHEQUE',date:'2026-01-21',des:'Bordereau n°0102734',prest:'',mnt:2360000,credit:2360000,debit:0,ft:0,pen:0,ref:'0102734',nature:'prevu',doc:[]},
+  {id:9,type:'SORTIE BANQUE',cat:'RESSOURCES HUMAINES',per:'JANVIER',int:'VIREMENT BANCAIRE',date:'2026-01-21',des:'Salaires stagiaires Janvier 2026',prest:'',mnt:500000,credit:0,debit:503300,ft:3300,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:10,type:'SORTIE BANQUE',cat:'RESSOURCES HUMAINES',per:'JANVIER',int:'VIREMENT BANCAIRE',date:'2026-01-21',des:'Salaires Dogbo, Aka, Lavri, Ouattara Issouf',prest:'',mnt:2050000,credit:0,debit:2063200,ft:13200,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:11,type:'SORTIE BANQUE',cat:'FRAIS DE TENUE DE COMPTE',per:'JANVIER',int:'FRAIS',date:'2026-01-30',des:'Agios, Frais fixes, Mansa online — Janvier 2026',prest:'',mnt:24750,credit:0,debit:24750,ft:0,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:12,type:'ENTREE BANQUE',cat:'A VOIR',per:'FEVRIER',int:'DEPOT CHEQUE',date:'2026-02-13',des:'Chq n°0002776 Bor n°017364',prest:'',mnt:1250800,credit:1250800,debit:0,ft:0,pen:0,ref:'0002776',nature:'prevu',doc:[]},
+  {id:13,type:'SORTIE BANQUE',cat:'A VOIR',per:'FEVRIER',int:'RETRAIT ESPECES',date:'2026-02-13',des:'Retrait Touré Hervé',prest:'Touré Hervé',mnt:1250800,credit:0,debit:1252450,ft:1650,pen:0,ref:'0003231',nature:'prevu',doc:[]},
+  {id:14,type:'ENTREE BANQUE',cat:'A VOIR',per:'FEVRIER',int:'DEPOT CHEQUE',date:'2026-02-23',des:'Chq n° / Bord n°4512906',prest:'',mnt:9800000,credit:9800000,debit:0,ft:0,pen:0,ref:'4512906',nature:'prevu',doc:[]},
+  {id:15,type:'SORTIE BANQUE',cat:'A VOIR',per:'FEVRIER',int:'RETRAIT ESPECES',date:'2026-02-23',des:'Retrait Touré Hervé',prest:'Touré Hervé',mnt:6000000,credit:0,debit:6000000,ft:0,pen:0,ref:'0003231',nature:'prevu',doc:[]},
+  {id:16,type:'SORTIE BANQUE',cat:'A VOIR',per:'FEVRIER',int:'VIREMENT BANCAIRE',date:'2026-02-23',des:'Virement BEN SOUDA',prest:'Ben Souda',mnt:1000000,credit:0,debit:1003300,ft:3300,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:17,type:'SORTIE BANQUE',cat:'A VOIR',per:'FEVRIER',int:'VIREMENT BANCAIRE',date:'2026-02-23',des:'Virement BAMBA MANI',prest:'Bamba Mani',mnt:1250000,credit:0,debit:1253300,ft:3300,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:18,type:'SORTIE BANQUE',cat:'A VOIR',per:'FEVRIER',int:'RETRAIT ESPECES',date:'2026-02-23',des:'Retrait Kouassi Aboli Firmin',prest:'Kouassi Aboli Firmin',mnt:480000,credit:0,debit:480000,ft:0,pen:0,ref:'0003230',nature:'prevu',doc:[]},
+  {id:19,type:'SORTIE BANQUE',cat:'A VOIR',per:'FEVRIER',int:'RETRAIT ESPECES',date:'2026-02-26',des:'Retrait KOMARA SIAK',prest:'Komara Siak',mnt:600000,credit:0,debit:600000,ft:0,pen:0,ref:'0003232',nature:'prevu',doc:[]},
+  {id:20,type:'SORTIE BANQUE',cat:'FRAIS DE TENUE DE COMPTE',per:'FEVRIER',int:'FRAIS',date:'2026-02-27',des:'Agios, Frais fixes, Mansa online — Février 2026',prest:'',mnt:24750,credit:0,debit:24750,ft:0,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:21,type:'SORTIE BANQUE',cat:'RESSOURCES HUMAINES',per:'FEVRIER',int:'VIREMENT BANCAIRE',date:'2026-02-27',des:'Salaire Coulibaly Souleymane',prest:'Coulibaly',mnt:250000,credit:0,debit:253300,ft:3300,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:22,type:'SORTIE BANQUE',cat:'A VOIR',per:'MARS',int:'VIREMENT BANCAIRE',date:'2026-03-02',des:'Virement BEN SOUDA',prest:'Ben Souda',mnt:200000,credit:0,debit:203300,ft:3300,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:23,type:'ENTREE BANQUE',cat:'A VOIR',per:'MARS',int:'DEPOT CHEQUE',date:'2026-03-09',des:'Chq n°0002779 Bor 017677',prest:'',mnt:500000,credit:500000,debit:0,ft:0,pen:0,ref:'0002779',nature:'prevu',doc:[]},
+  {id:24,type:'SORTIE BANQUE',cat:'A VOIR',per:'MARS',int:'VIREMENT BANCAIRE',date:'2026-03-12',des:'Virement BEN SOUDA',prest:'Ben Souda',mnt:505000,credit:0,debit:508300,ft:3300,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:25,type:'SORTIE BANQUE',cat:'FRAIS DE TENUE DE COMPTE',per:'AVRIL',int:'FRAIS',date:'2026-03-31',des:'Agios, Frais fixes, Mansa online — Mars 2026',prest:'',mnt:24750,credit:0,debit:24750,ft:0,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:26,type:'ENTREE BANQUE',cat:'MISSION',per:'AVRIL',int:'VIREMENT BANCAIRE',date:'2026-04-03',des:"Avance démarrage — Accompagnement structuration GD Couverture (FAC 2300595J26000000009)",prest:'GD Couverture',mnt:4280119,credit:4280119,debit:0,ft:0,pen:0,ref:'2300595J26000000009',nature:'prevu',doc:[]},
+  {id:27,type:'SORTIE BANQUE',cat:'A VOIR',per:'AVRIL',int:'VIREMENT BANCAIRE',date:'2026-04-07',des:'Virement BEN SOUDA',prest:'Ben Souda',mnt:1000000,credit:0,debit:1003300,ft:3300,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:28,type:'SORTIE BANQUE',cat:'RESSOURCES HUMAINES',per:'AVRIL',int:'VIREMENT BANCAIRE',date:'2026-04-07',des:'Salaires Dogbo, Aka, Coulibaly, Tanoh, Kimana, Touré, Ouattara Issouf',prest:'',mnt:2560000,credit:0,debit:2583100,ft:23100,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:29,type:'SORTIE BANQUE',cat:'RESSOURCES HUMAINES',per:'AVRIL',int:'VIREMENT BANCAIRE',date:'2026-04-07',des:'Salaires Diop, Doumbia, Barry (stagiaires)',prest:'',mnt:300000,credit:0,debit:303300,ft:3300,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:30,type:'ENTREE BANQUE',cat:'MISSION',per:'AVRIL',int:'DEPOT CHEQUE',date:'2026-04-13',des:'Règlement avance facture normalisée SAKO PLAST — Chq n°1939249 BGFI',prest:'SAKO PLAST MULTISERVICES',mnt:1000000,credit:1000000,debit:0,ft:0,pen:0,ref:'1939249 BGFI',nature:'prevu',doc:[]},
+  {id:31,type:'SORTIE BANQUE',cat:"CHARGES D'EXPLOITATION",per:'AVRIL',int:'RETRAIT ESPECES',date:'2026-04-13',des:'Retrait Touré Hervé — alimentation petite caisse',prest:'Touré Hervé',mnt:1300000,credit:0,debit:1300000,ft:0,pen:0,ref:'0003233',nature:'prevu',doc:[]},
+  {id:32,type:'ENTREE BANQUE',cat:'MISSION',per:'AVRIL',int:'VIREMENT BANCAIRE',date:'2026-04-17',des:"Sous-traitance data plateforme sécurisée et évolutive",prest:'',mnt:15750000,credit:15750000,debit:0,ft:0,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:33,type:'SORTIE BANQUE',cat:'HONORAIRES MISSIONS',per:'AVRIL',int:'VIREMENT BANCAIRE',date:'2026-04-17',des:'Honoraires KIMANA — Arriérés jan-fév + missions mar-avr (GUCE-CI / Ocean Core)',prest:'Kimana Misago',mnt:1000000,credit:0,debit:1003300,ft:3300,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:34,type:'ENTREE BANQUE',cat:'MISSION',per:'AVRIL',int:'DEPOT CHEQUE',date:'2026-04-17',des:'Avance démarrage Poste 5.0 — assistance stratégique et pilotage (1ère tranche)',prest:'La Poste CI',mnt:10000000,credit:10000000,debit:0,ft:0,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:35,type:'SORTIE BANQUE',cat:'HONORAIRES MISSIONS',per:'AVRIL',int:'VIREMENT BANCAIRE',date:'2026-04-17',des:'Honoraires poste BEN SOUDA — Poste 5.0',prest:'Ben Souda',mnt:2746268,credit:0,debit:2749568,ft:3300,pen:0,ref:'',nature:'prevu',doc:[]},
+  {id:36,type:'SORTIE BANQUE',cat:'HONORAIRES MISSIONS',per:'AVRIL',int:'RETRAIT ESPECES',date:'2026-04-17',des:'Honoraires EZOUA TEDDY — Chq n°0003236',prest:'Ezoua Teddy',mnt:1611940,credit:0,debit:1611940,ft:0,pen:0,ref:'0003236',nature:'prevu',doc:[]},
+  {id:37,type:'SORTIE BANQUE',cat:'A VOIR',per:'AVRIL',int:'RETRAIT ESPECES',date:'2026-04-17',des:'Retrait Touré Hervé — Chq n°0003234',prest:'Touré Hervé',mnt:15000000,credit:0,debit:15000000,ft:0,pen:0,ref:'0003234',nature:'prevu',doc:[]},
+  {id:38,type:'SORTIE BANQUE',cat:'HONORAIRES MISSIONS',per:'AVRIL',int:'RETRAIT ESPECES',date:'2026-04-20',des:'Honoraires DABADIE Thomas — Chq n°0003235',prest:'Dabadie Thomas',mnt:2449254,credit:0,debit:2449254,ft:0,pen:0,ref:'0003235',nature:'prevu',doc:[]},
+  {id:39,type:'ENTREE BANQUE',cat:'MISSION',per:'AVRIL',int:'DEPOT CHEQUE',date:'2026-04-20',des:'Avance Poste 5.0 — 2ème tranche — Chq n°3240129',prest:'La Poste CI',mnt:5000000,credit:5000000,debit:0,ft:0,pen:0,ref:'3240129',nature:'prevu',doc:[]},
+  {id:40,type:'ENTREE BANQUE',cat:'MISSION',per:'AVRIL',int:'DEPOT CHEQUE',date:'2026-04-20',des:'Avance Poste 5.0 — 3ème tranche — Chq n°8369468',prest:'La Poste CI',mnt:5000000,credit:5000000,debit:0,ft:0,pen:0,ref:'8369468',nature:'prevu',doc:[]},
+],
+
+petite_caisse: [
+  {id:1,num:'PC-2026-001',caisse:'BEN SOUDA',type:'entree',cat:"CHARGES D'EXPLOITATION",nature:'prevu',per:'AVRIL',date:'2026-04-13',des:'Dotation caisse Ben Souda — Bordereau n°0003233',prest:'Touré Hervé',entree:550000,sortie:0,pen:0,solde:550000,doc:[]},
+  {id:2,num:'PC-2026-002',caisse:'BEN SOUDA',type:'sortie',cat:"CHARGES D'EXPLOITATION",nature:'prevu',per:'AVRIL',date:'2026-04-14',des:'Approvisionnement carburant',prest:'Corlay',entree:0,sortie:20000,pen:0,solde:530000,doc:[]},
+  {id:3,num:'PC-2026-003',caisse:'BEN SOUDA',type:'sortie',cat:"CHARGES D'EXPLOITATION",nature:'prevu',per:'AVRIL',date:'2026-04-16',des:'Approvisionnement carburant',prest:'Total',entree:0,sortie:10000,pen:0,solde:520000,doc:[]},
+  {id:4,num:'PC-2026-004',caisse:'PRINCIPALE',type:'entree',cat:"CHARGES D'EXPLOITATION",nature:'prevu',per:'AVRIL',date:'2026-04-13',des:'Dotation caisse principale — Bordereau n°0003233',prest:'Touré Hervé',entree:750000,sortie:0,pen:0,solde:750000,doc:[]},
+  {id:5,num:'PC-2026-005',caisse:'PRINCIPALE',type:'sortie',cat:"CHARGES D'EXPLOITATION",nature:'prevu',per:'AVRIL',date:'2026-04-14',des:'Règlement facture CIE — nov/déc 25 + jan 26',prest:'CIE',entree:0,sortie:293625,pen:28815,solde:456375,doc:[]},
+  {id:6,num:'PC-2026-006',caisse:'PRINCIPALE',type:'sortie',cat:"CHARGES D'EXPLOITATION",nature:'imprevu',per:'AVRIL',date:'2026-04-13',des:'Aménagement bureau — 4 tables, 3 chaises — Facture n°03573948',prest:'Fournisseur mobilier',entree:0,sortie:275000,pen:0,solde:181375,doc:[]},
+  {id:7,num:'PC-2026-007',caisse:'PRINCIPALE',type:'sortie',cat:"CHARGES D'EXPLOITATION",nature:'imprevu',per:'AVRIL',date:'2026-04-13',des:'Réparation électricité (avance) — Facture n°6273413',prest:'Électricien',entree:0,sortie:99000,pen:1000,solde:82375,doc:[]},
+  {id:8,num:'PC-2026-008',caisse:'PRINCIPALE',type:'sortie',cat:"CHARGES D'EXPLOITATION",nature:'imprevu',per:'AVRIL',date:'2026-04-14',des:'Entretien climatiseurs',prest:'Technicien clim',entree:0,sortie:49500,pen:500,solde:32875,doc:[]},
+  {id:9,num:'PC-2026-009',caisse:'PRINCIPALE',type:'sortie',cat:'AUTRE',nature:'prevu',per:'AVRIL',date:'2026-04-20',des:'Règlement SODECI — factures nov/déc 25 + jan 26 (réf 031875830401202601)',prest:'SODECI',entree:0,sortie:13901,pen:1500,solde:18974,doc:[]},
+  {id:10,num:'PC-2026-010',caisse:'PRINCIPALE',type:'sortie',cat:'AUTRE',nature:'prevu',per:'AVRIL',date:'2026-04-14',des:"Bonbonne d'eau — Facture n°0000501",prest:'Fournisseur eau',entree:0,sortie:10000,pen:0,solde:8974,doc:[]},
+],
+
+tresorerie: [
+  {mois:'Janvier',type:'reel',banque:5490488,coffre:0,entrees:4236200,chg_prev:8295000,chg_pay:6795000,reste:1500000},
+  {mois:'Février',type:'reel',banque:11050800,coffre:0,entrees:11050800,chg_prev:8295000,chg_pay:6795000,reste:1500000},
+  {mois:'Mars',type:'reel',banque:500000,coffre:0,entrees:500000,chg_prev:8295000,chg_pay:6795000,reste:1500000},
+  {mois:'Avril',type:'reel',banque:41030119,coffre:0,entrees:41030119,chg_prev:8295000,chg_pay:0,reste:8295000},
+  {mois:'Mai',type:'prevision',banque:0,coffre:0,entrees:0,chg_prev:8295000,chg_pay:0,reste:8295000},
+  {mois:'Juin',type:'prevision',banque:0,coffre:0,entrees:0,chg_prev:8295000,chg_pay:0,reste:8295000},
+  {mois:'Juillet',type:'prevision',banque:0,coffre:0,entrees:0,chg_prev:8295000,chg_pay:0,reste:8295000},
+  {mois:'Août',type:'prevision',banque:0,coffre:0,entrees:0,chg_prev:8295000,chg_pay:0,reste:8295000},
+  {mois:'Septembre',type:'prevision',banque:0,coffre:0,entrees:0,chg_prev:8295000,chg_pay:0,reste:8295000},
+  {mois:'Octobre',type:'prevision',banque:0,coffre:0,entrees:0,chg_prev:8295000,chg_pay:0,reste:8295000},
+  {mois:'Novembre',type:'prevision',banque:0,coffre:0,entrees:0,chg_prev:8295000,chg_pay:0,reste:8295000},
+  {mois:'Décembre',type:'prevision',banque:0,coffre:0,entrees:0,chg_prev:8295000,chg_pay:0,reste:8295000},
+],
+
+nextId: {staff:16,mission:5,facture:4,charge:23,dep:41,pc:11}
+};
+
+// ══════════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════════════════════
+let _curPage = 'dashboard';
+document.querySelectorAll('.sb-a[data-p]').forEach(a => {
+  a.addEventListener('click', e => { e.preventDefault(); nav(a.dataset.p); });
+});
+function nav(p) {
+  document.querySelectorAll('.pg').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.sb-a').forEach(x=>x.classList.remove('on'));
+  $('p-'+p).classList.add('on');
+  document.querySelector(`.sb-a[data-p="${p}"]`).classList.add('on');
+  _curPage = p;
+  renderPage(p);
+}
+function renderPage(p) {
+  const fn = {
+    dashboard: renderDash,
+    missions: () => { renderPipeline(); renderMTable(); },
+    facturation: () => renderFact('factures'),
+    encaissements: renderEnc,
+    salaires: renderSal,
+    charges: renderChg,
+    depenses: renderDep,
+    'petite-caisse': renderPC,
+    tresorerie: renderTres,
+    bfr: () => { renderBFRTable(); calcBFR(); },
+    tva: renderTVA,
+    parametres: renderParams,
+  };
+  if (fn[p]) fn[p]();
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  MODALS
+// ══════════════════════════════════════════════════════════════════
+let _editId = null;
+function openMod(id, editId) {
+  _editId = editId;
+  $(id).classList.add('on');
+  if (id === 'mo-mis') { buildEncGrid(); if (editId) fillMisForm(editId); }
+  if (id === 'mo-fac') fillFacMisList();
+  if (id === 'mo-staff' && editId) fillStaffForm(editId);
+  if (id === 'mo-chg' && editId) fillChgForm(editId);
+}
+function closeMod(id) { $(id).classList.remove('on'); _editId = null; }
+document.querySelectorAll('.mbo').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('on'); }));
+
+function addDocs(listId, inp) {
+  const fl = $(listId); if(!fl) return;
+  Array.from(inp.files).forEach(f => {
+    const d = document.createElement('div');
+    d.className = 'fitem';
+    d.innerHTML = `📎 <span>${f.name}</span> <span style="opacity:.6;font-size:10px">${(f.size/1024).toFixed(0)} Ko</span>`;
+    fl.appendChild(d);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════════════════════════════
+function renderDash() {
+  $('dash-date').textContent = new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  const bq = DB.params.banque, cf = DB.params.coffre;
+  const treso = bq + cf;
+  const encTot = DB.missions.reduce((s,m)=>s+m.avance,0);
+  const chgMens = DB.charges.reduce((s,c)=>s+(c.budget||0),0);
+  const bfr = treso - chgMens;
+  const actives = DB.missions.filter(m=>m.statut==='en_cours').length;
+  const arrSolde = DB.params.arr_sal - DB.params.arr_sal_r;
+
+  $('d-kpis').innerHTML = `
+    <div class="kpi g"><div class="kpi-l">Tréso banque</div><div class="kpi-v">${fmt(bq)}</div><div class="kpi-s">FCFA disponibles</div></div>
+    <div class="kpi"><div class="kpi-l">Coffre-fort</div><div class="kpi-v">${fmt(cf)}</div><div class="kpi-s">FCFA espèces</div></div>
+    <div class="kpi ${bfr>=0?'g':'r'}"><div class="kpi-l">BFR net</div><div class="kpi-v">${bfr>=0?'+':''}${fmt(bfr)}</div><div class="kpi-s">${bfr>=0?'Excédent':'Besoin financement'}</div></div>
+    <div class="kpi r"><div class="kpi-l">Charges mensuelles</div><div class="kpi-v">${fmt(chgMens)}</div><div class="kpi-s">FCFA budget/mois</div></div>
+    <div class="kpi b"><div class="kpi-l">Missions actives</div><div class="kpi-v">${actives}</div><div class="kpi-s">sur ${DB.missions.length} total</div></div>
+    <div class="kpi a"><div class="kpi-l">Arriéré salaires</div><div class="kpi-v">${fmt(arrSolde)}</div><div class="kpi-s">FCFA restants</div></div>
+  `;
+
+  $('d-missions').innerHTML = DB.missions.filter(m=>m.statut==='en_cours').map(m => {
+    const pct = m.montant>0 ? Math.round(m.avance/m.montant*100) : 0;
+    return `<tr>
+      <td><div class="fw7">${m.nom}</div><div style="font-size:10.5px;color:var(--tx3)">${m.desc?.substring(0,48)||''}</div></td>
+      <td style="font-size:11px;color:var(--tx3)">${m.client}</td>
+      <td>${m.apporteur?`<span class="bdg bb" style="font-size:9.5px">${m.apporteur}</span>`:'—'}</td>
+      <td class="tnum">${fmt(m.montant)}</td>
+      <td class="tnum tc">${fmt(m.avance)} <span style="font-size:10px;color:var(--tx3)">(${pct}%)</span></td>
+      <td><span class="bdg ${ST_CLS[m.statut]||'bn'}">${ST_LABEL[m.statut]||m.statut}</span></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" class="empty">Aucune mission active</td></tr>';
+
+  const alerts = [];
+  if (arrSolde > 0) alerts.push({c:'r',i:'⚠',t:`Arriéré salaires : ${fmt(arrSolde)} FCFA à apurer (mensualité ${fmt(DB.params.arr_sal_m)} FCFA)`});
+  if (bfr < 0) alerts.push({c:'r',i:'🔴',t:`BFR négatif : besoin de financement de ${fmt(-bfr)} FCFA`});
+  const enAtt = DB.missions.filter(m=>m.statut==='en_cours'&&m.avance<m.montant);
+  if (enAtt.length) alerts.push({c:'a',i:'⚡',t:`${enAtt.length} mission(s) avec encaissements attendus : ${fmt(enAtt.reduce((s,m)=>s+(m.montant-m.avance),0))} FCFA`});
+  const couv = chgMens > 0 ? (treso/chgMens).toFixed(1) : '∞';
+  alerts.push({c:'g',i:'✅',t:`Tréso totale : ${fmt(treso)} FCFA — Couverture : ${couv} mois de charges`});
+  const tvaTot = DB.missions.filter(m=>m.tva==='18').reduce((s,m)=>s+m.avance*18/118,0);
+  if (tvaTot > 0) alerts.push({c:'b',i:'ℹ',t:`TVA estimée à reverser : ${fmt(tvaTot)} FCFA (18% sur missions assujetties)`});
+  $('d-alerts').innerHTML = alerts.map(a=>`<div class="alert ${a.c}"><span>${a.i}</span><span>${a.t}</span></div>`).join('');
+
+  // Charts
+  destroyC('flux'); destroyC('cat');
+  const periodes = ['JANVIER','FEVRIER','MARS','AVRIL'];
+  const entreesMois = MF.map((_,i) => {
+    const k = MK[i];
+    return DB.missions.reduce((s,m)=>s+(m.enc?m.enc[k]||0:0),0);
+  });
+  const chgMois = MF.map((_,i) => {
+    const k = MK[i];
+    return DB.charges.reduce((s,c)=>s+(c.r?c.r[k]||0:0),0);
+  });
+  CHARTS['flux'] = new Chart($('ch-flux').getContext('2d'), {
+    type:'bar',
+    data:{labels:MF.map(m=>m.substring(0,3)),datasets:[
+      {label:'Entrées missions',data:entreesMois,backgroundColor:'rgba(27,94,64,.55)',borderColor:'#1B5E40',borderWidth:1},
+      {label:'Charges réalisées',data:chgMois,type:'line',borderColor:'#B53A2A',pointRadius:3,tension:.3,backgroundColor:'transparent',borderWidth:2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8}}},scales:{y:{ticks:{callback:v=>Math.round(v/1000000)+'M',font:{size:10}},grid:{color:'rgba(0,0,0,.04)'}}}}
+  });
+  const catD = {
+    'RH':DB.charges.filter(c=>c.cat==='RH').reduce((s,c)=>s+(c.budget||0),0),
+    'Exploitation':DB.charges.filter(c=>c.cat==='EXPLOIT').reduce((s,c)=>s+(c.budget||0),0),
+    'Utilités':DB.charges.filter(c=>c.cat==='UTIL').reduce((s,c)=>s+(c.budget||0),0),
+    'Variable':DB.charges.filter(c=>c.cat==='VAR').reduce((s,c)=>s+(c.budget||0),0),
+  };
+  CHARTS['cat'] = new Chart($('ch-cat').getContext('2d'), {
+    type:'doughnut',
+    data:{labels:Object.keys(catD),datasets:[{data:Object.values(catD),backgroundColor:['#1B5E40','#1A4E8A','#B5620A','#5B3FA0'],borderWidth:2,borderColor:'#FDFCF9'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8}}}}
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  MISSIONS & PIPELINE
+// ══════════════════════════════════════════════════════════════════
+const STAGES = ['prospect','tdr','propale','contrat','en_cours','termine','perdu'];
+function renderPipeline() {
+  $('pipeline').innerHTML = STAGES.map(s => {
+    const items = DB.missions.filter(m=>m.statut===s);
+    return `<div class="pl-col">
+      <div class="pl-col-h">${ST_LABEL[s]} <span style="background:rgba(255,255,255,.3);padding:1px 5px;border-radius:9px">${items.length}</span></div>
+      ${items.map(m=>`<div class="pl-item" onclick="openMod('mo-mis',${m.id})">
+        <div class="pl-n">${m.nom}</div>
+        <div class="pl-a">${fmt(m.montant)} FCFA</div>
+        <div class="pl-c">${m.client}</div>
+        ${m.apporteur?`<div class="pl-app">▸ ${m.apporteur}</div>`:''}
+      </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function renderMTable() {
+  const fs = $v('fil-m-st'), fa = $v('fil-m-ap');
+  const list = DB.missions.filter(m => (!fs||m.statut===fs) && (!fa||m.apporteur===fa));
+  $('m-tbl').innerHTML = list.map(m => {
+    const reste = m.montant - m.avance;
+    return `<tr>
+      <td><div class="fw7">${m.nom}</div><div style="font-size:10.5px;color:var(--tx3)">${m.desc?.substring(0,50)||''}</div></td>
+      <td style="font-size:11.5px">${m.client}</td>
+      <td>${m.apporteur?`<span class="bdg bb" style="font-size:9.5px">${m.apporteur}</span>`:'<span class="bdg bn">—</span>'}</td>
+      <td class="tnum">${fmt(m.montant)}</td>
+      <td class="tnum tc">${fmt(m.avance)}</td>
+      <td class="tnum ${reste>0?'rc':''}">${fmt(reste)}</td>
+      <td style="font-size:11px">${m.debut||'—'}</td>
+      <td style="font-size:11px">${m.fin||'—'}</td>
+      <td><span class="bdg ${ST_CLS[m.statut]||'bn'}">${ST_LABEL[m.statut]||m.statut}</span></td>
+      <td><span class="bdg ${m.tva==='18'?'bb':'bn'}" style="font-size:9.5px">${m.tva==='18'?'TVA 18%':'Exo'}</span></td>
+      <td><span class="bdg ${m.nature==='imprevu'?'br':'bg'}" style="font-size:9.5px">${m.nature==='imprevu'?'Imprévu':'Prévu'}</span></td>
+      <td style="display:flex;gap:4px">
+        <button class="ebt" onclick="openMod('mo-mis',${m.id})">✏</button>
+        <button class="ibt" onclick="delMis(${m.id})">🗑</button>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="12" class="empty">Aucune mission</td></tr>';
+}
+
+function buildEncGrid() {
+  const g = $('m-enc-grid'); if(!g) return;
+  g.innerHTML = MF.map((m,i)=>`<div style="display:flex;flex-direction:column;gap:3px">
+    <label style="font-size:10px;font-weight:700;color:var(--tx3)">${m.substring(0,3)}</label>
+    <input class="inp" id="me-${i}" type="number" value="0" style="padding:4px 6px;font-size:11px">
+  </div>`).join('');
+}
+
+function fillMisForm(id) {
+  const m = DB.missions.find(x=>x.id===id); if(!m) return;
+  $('mo-mis-title').textContent = 'Modifier la mission';
+  ['nom','client','desc'].forEach(f=>{ const e=$(('m-'+f)); if(e) e.value=m[f]||''; });
+  $('m-ap').value=m.apporteur||''; $('m-st').value=m.statut;
+  $('m-mnt').value=m.montant; $('m-av').value=m.avance;
+  $('m-debut').value=m.debut; $('m-fin').value=m.fin;
+  $('m-tva').value=m.tva; $('m-nature').value=m.nature||'prevu';
+  buildEncGrid();
+  MK.forEach((k,i)=>{ const e=$('me-'+i); if(e&&m.enc) e.value=m.enc[k]||0; });
+}
+
+function saveMission() {
+  const nom = $v('m-nom').trim(), client = $v('m-client').trim();
+  if (!nom||!client) { alert('Nom et client obligatoires'); return; }
+  const enc = {}; MK.forEach((k,i)=>{ enc[k]=parseFloat($v('me-'+i)||0)||0; });
+  const data = {
+    nom, client, apporteur:$v('m-ap'), statut:$v('m-st'),
+    montant:parseFloat($v('m-mnt'))||0, avance:parseFloat($v('m-av'))||0,
+    debut:$v('m-debut'), fin:$v('m-fin'), tva:$v('m-tva'),
+    nature:$v('m-nature'), desc:$v('m-desc'), docs:[], enc
+  };
+  if (_editId) {
+    const idx = DB.missions.findIndex(x=>x.id===_editId);
+    if (idx>=0) DB.missions[idx] = {...DB.missions[idx],...data};
+  } else { data.id=DB.nextId.mission++; DB.missions.push(data); }
+  closeMod('mo-mis');
+  renderPipeline(); renderMTable();
+}
+
+function delMis(id) {
+  if (!confirm('Supprimer cette mission ?')) return;
+  DB.missions = DB.missions.filter(m=>m.id!==id);
+  renderPipeline(); renderMTable();
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  FACTURATION
+// ══════════════════════════════════════════════════════════════════
+document.querySelectorAll('[data-ft]').forEach(t => t.addEventListener('click',()=>renderFact(t.dataset.ft)));
+
+function renderFact(tab) {
+  document.querySelectorAll('[data-ft]').forEach(t=>t.classList.toggle('on',t.dataset.ft===tab));
+  const el = $('fact-content');
+  if (tab==='factures') {
+    el.innerHTML = `<div class="card"><div class="tw"><table><thead><tr>
+      <th>N° Facture</th><th>Mission</th><th>Client</th><th>Date</th>
+      <th>HT</th><th>TVA</th><th>TTC</th><th>Tranches</th><th>Encaissé</th><th>Statut</th><th></th>
+    </tr></thead><tbody>${DB.factures.map(f=>{
+      const m = DB.missions.find(x=>x.id===f.mis_id);
+      const encTot = f.tranches.reduce((s,t)=>s+t.enc,0);
+      const allPaid = f.tranches.every(t=>t.statut==='Payé');
+      const somePaid = f.tranches.some(t=>t.enc>0);
+      const sc = allPaid?'bg':somePaid?'ba':'br';
+      const sl = allPaid?'Payée':somePaid?'Partielle':'En attente';
+      return `<tr>
+        <td class="mono fw7">${f.num}</td>
+        <td>${m?m.nom:'—'}</td>
+        <td style="font-size:11px;color:var(--tx3)">${m?m.client:'—'}</td>
+        <td style="font-size:11px">${f.date}</td>
+        <td class="tnum">${fmt(f.ht)}</td>
+        <td class="tnum ${f.tva_t==='18'?'bc':''}">${fmt(f.tva_m)}</td>
+        <td class="tnum fw7">${fmt(f.ttc)}</td>
+        <td class="tr">${f.tranches.length}</td>
+        <td class="tnum tc">${fmt(encTot)}</td>
+        <td><span class="bdg ${sc}">${sl}</span></td>
+        <td><button class="ebt" onclick="editFacDetails(${f.id})">✏ Tranches</button></td>
+      </tr>`;
+    }).join('')}</tbody></table></div></div>`;
+  } else {
+    const rows = DB.factures.flatMap(f=>{
+      const m = DB.missions.find(x=>x.id===f.mis_id);
+      return f.tranches.map(t=>{
+        const ecart = t.enc - t.mnt;
+        const sc = t.statut==='Payé'?'bg':t.statut==='Partiel'?'ba':'br';
+        return `<tr>
+          <td>${m?m.nom:'—'}</td>
+          <td class="mono" style="font-size:11.5px">${f.num}</td>
+          <td>Tranche ${t.num}</td>
+          <td class="tnum">${fmt(t.mnt)}</td>
+          <td style="font-size:11px">${t.ech||'—'}</td>
+          <td class="tnum tc">${fmt(t.enc)}</td>
+          <td style="font-size:11px">${t.date_enc||'—'}</td>
+          <td class="mono" style="font-size:11px">${t.ref||'—'}</td>
+          <td class="tnum ${ecart>=0?'tc':'rc'}">${ecart>=0?'+':''}${fmt(ecart)}</td>
+          <td><span class="bdg ${sc}">${t.statut}</span></td>
+          <td>${t.docs&&t.docs.length?`<span class="bdg bb" style="font-size:9px">📎 ${t.docs.length}</span>`:`<label class="bdg bn" style="cursor:pointer;font-size:9px"><input type="file" accept=".pdf,image/*" style="display:none" onchange="attachTDoc(${f.id},${t.id},this)">+ Justif</label>`}</td>
+          <td><button class="ebt" onclick="editTranche(${f.id},${t.id})">✏</button></td>
+        </tr>`;
+      });
+    });
+    el.innerHTML = `<div class="card"><div class="tw"><table><thead><tr>
+      <th>Mission</th><th>Facture</th><th>Tranche</th><th>Montant prévu</th><th>Échéance</th>
+      <th>Encaissé</th><th>Date enc.</th><th>Référence</th><th>Écart</th><th>Statut</th><th>Justif.</th><th></th>
+    </tr></thead><tbody>${rows.join('')}</tbody></table></div></div>`;
+  }
+}
+
+function attachTDoc(fId,tId,inp) {
+  const f=DB.factures.find(x=>x.id===fId); const t=f?.tranches.find(x=>x.id===tId);
+  if(t) { if(!t.docs)t.docs=[]; Array.from(inp.files).forEach(fi=>t.docs.push(fi.name)); renderFact('echeancier'); }
+}
+
+function editTranche(fId,tId) {
+  const f=DB.factures.find(x=>x.id===fId); const t=f?.tranches.find(x=>x.id===tId); if(!t) return;
+  const enc=prompt('Montant encaissé (FCFA) :',t.enc); if(enc===null) return;
+  const date=prompt('Date encaissement (AAAA-MM-JJ) :',t.date_enc);
+  const ref=prompt('Référence/bordereau :',t.ref);
+  t.enc=parseFloat(enc)||0; t.date_enc=date||''; t.ref=ref||'';
+  t.statut=t.enc>=t.mnt?'Payé':t.enc>0?'Partiel':'En attente';
+  const m=DB.missions.find(x=>x.id===f.mis_id);
+  if(m) m.avance=f.tranches.reduce((s,tr)=>s+tr.enc,0);
+  renderFact('echeancier');
+}
+
+function fillFacMisList() {
+  $('fac-mis').innerHTML=DB.missions.map(m=>`<option value="${m.id}">${m.nom} — ${m.client}</option>`).join('');
+}
+function fillFacMis() {
+  const m=DB.missions.find(x=>x.id===parseInt($v('fac-mis')));
+  if(m){$('fac-tva').value=m.tva; calcTTC();}
+}
+function calcTTC() {
+  const ht=parseFloat($v('fac-ht'))||0;
+  const tva=$v('fac-tva')==='18'?0.18:0;
+  const tvaM=ht*tva;
+  if($('fac-tva-m'))$('fac-tva-m').value=Math.round(tvaM);
+  if($('fac-ttc'))$('fac-ttc').value=Math.round(ht+tvaM);
+  buildTranches();
+}
+function buildTranches() {
+  const n=parseInt($v('fac-nb'))||1;
+  const ttc=parseFloat($('fac-ttc')?.value)||0;
+  $('fac-tranches-zone').innerHTML=`<div class="sep">Détail des tranches</div><div style="display:flex;flex-direction:column;gap:8px">` +
+    Array.from({length:n},(_,i)=>`<div style="display:grid;grid-template-columns:30px 1fr 1fr 1fr;gap:8px;align-items:end">
+      <span style="font-size:12px;font-weight:700;color:var(--tx3);padding-bottom:4px">T${i+1}</span>
+      <div class="fr"><label class="lbl">Montant</label><input class="inp" id="ft-m-${i}" type="number" value="${Math.round(ttc/n)}" style="font-size:12px"></div>
+      <div class="fr"><label class="lbl">Échéance</label><input class="inp" id="ft-e-${i}" type="date" style="font-size:12px"></div>
+      <div class="fr"><label class="lbl">Libellé</label><input class="inp" id="ft-l-${i}" placeholder="Avance démarrage" style="font-size:12px"></div>
+    </div>`).join('')+`</div>`;
+}
+function saveFacture() {
+  const n=parseInt($v('fac-nb'))||1;
+  const ht=parseFloat($v('fac-ht'))||0;
+  const tvaM=parseFloat($('fac-tva-m')?.value)||0;
+  const ttc=parseFloat($('fac-ttc')?.value)||ht;
+  const tranches=Array.from({length:n},(_,i)=>({
+    id:i+1,num:i+1,mnt:parseFloat($v('ft-m-'+i))||0,
+    ech:$v('ft-e-'+i),enc:0,date_enc:'',ref:'',statut:'En attente',docs:[]
+  }));
+  DB.factures.push({
+    id:DB.nextId.facture++,mis_id:parseInt($v('fac-mis')),
+    num:$v('fac-num')||`FAC-2026-${String(DB.nextId.facture).padStart(3,'0')}`,
+    date:$v('fac-date'),ht,tva_t:$v('fac-tva'),tva_m:tvaM,ttc,docs:[],tranches
+  });
+  closeMod('mo-fac'); renderFact('factures');
+}
+function editFacDetails(id) { renderFact('echeancier'); }
+
+// ══════════════════════════════════════════════════════════════════
+//  ENCAISSEMENTS
+// ══════════════════════════════════════════════════════════════════
+function renderEnc() {
+  const filM = $v('fil-enc-m');
+  const allT = DB.factures.flatMap(f=>{
+    const m=DB.missions.find(x=>x.id===f.mis_id);
+    return f.tranches.map(t=>({...t,mission:m?.nom||'—',client:m?.client||'—',fNum:f.num,periode:t.ech?new Date(t.ech).toLocaleString('fr-FR',{month:'long'}).toUpperCase():''}));
+  }).filter(t=>!filM||(t.ech&&new Date(t.ech).toLocaleString('fr-FR',{month:'long'}).toUpperCase().startsWith(filM.substring(0,4))));
+
+  const totPrev=allT.reduce((s,t)=>s+t.mnt,0);
+  const totEnc=allT.reduce((s,t)=>s+t.enc,0);
+  $('enc-kpis').innerHTML=`
+    <div class="kpi b"><div class="kpi-l">Total prévu</div><div class="kpi-v">${fmt(totPrev)}</div><div class="kpi-s">FCFA</div></div>
+    <div class="kpi g"><div class="kpi-l">Total encaissé</div><div class="kpi-v">${fmt(totEnc)}</div><div class="kpi-s">FCFA</div></div>
+    <div class="kpi ${totEnc-totPrev>=0?'g':'r'}"><div class="kpi-l">Écart</div><div class="kpi-v">${fmtS(totEnc-totPrev)}</div><div class="kpi-s">FCFA</div></div>
+    <div class="kpi a"><div class="kpi-l">En attente</div><div class="kpi-v">${fmt(totPrev-totEnc)}</div><div class="kpi-s">FCFA</div></div>
+  `;
+  $('enc-tbl').innerHTML=allT.map(t=>{
+    const ec=t.enc-t.mnt;
+    const rowC=t.statut==='Payé'?'background:rgba(27,94,64,.05)':t.statut==='En attente'?'background:rgba(181,58,42,.05)':'';
+    return `<tr style="${rowC}">
+      <td class="fw7">${t.mission}</td><td class="mono" style="font-size:11px">${t.fNum}</td>
+      <td>T${t.num}</td><td class="tnum">${fmt(t.mnt)}</td>
+      <td style="font-size:11px">${t.ech||'—'}</td>
+      <td class="tnum tc">${fmt(t.enc)}</td>
+      <td style="font-size:11px">${t.date_enc||'—'}</td>
+      <td class="mono" style="font-size:11px">${t.ref||'—'}</td>
+      <td class="tnum ${ec>=0?'tc':'rc'}">${ec>=0?'+':''}${fmt(ec)}</td>
+      <td><span class="bdg ${t.statut==='Payé'?'bg':t.statut==='En attente'?'br':'ba'}">${t.statut}</span></td>
+      <td>${t.docs&&t.docs.length?`<span class="bdg bb" style="font-size:9px">📎</span>`:`<label class="bdg bn" style="cursor:pointer;font-size:9px"><input type="file" accept=".pdf,image/*" style="display:none">+ Justif</label>`}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="11" class="empty">Aucun encaissement</td></tr>';
+
+  const entrees=DB.depenses.filter(d=>d.type==='ENTREE BANQUE'&&d.credit>0&&(!filM||d.per.startsWith(filM.substring(0,4))));
+  $('enc-tbl2').innerHTML=entrees.map(e=>`<tr>
+    <td style="font-size:11px;white-space:nowrap">${e.date}</td>
+    <td><span class="bdg bn" style="font-size:9.5px">${e.per}</span></td>
+    <td style="font-size:11px;color:var(--tx3)">${e.int}</td>
+    <td>${e.des}</td>
+    <td class="tnum tc fw7">${fmt(e.credit)}</td>
+    <td><span class="bdg bn" style="font-size:9px">${e.cat}</span></td>
+  </tr>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  SALAIRES
+// ══════════════════════════════════════════════════════════════════
+function renderSal() {
+  const mi=parseInt($v('sal-mois'));
+  const mk=MK[mi]; const ml=MF[mi];
+  const fs=$v('fil-sal-s'),fp=$v('fil-sal-p');
+  $('sal-title').textContent=`Salaires — ${ml} 2026`;
+  let list=DB.staff.filter(s=>{
+    if(fs==='actif'&&!s.actif)return false;
+    if(fs==='inactif'&&s.actif)return false;
+    if(fp==='marabu'&&!s.marabu)return false;
+    if(fp==='ext'&&s.marabu)return false;
+    return true;
+  });
+  const totB=list.reduce((s,x)=>s+(x.sal||0),0);
+  const totP=list.reduce((s,x)=>s+(x.paie?x.paie[mk]||0:0),0);
+  $('sal-kpis').innerHTML=`
+    <div class="kpi"><div class="kpi-l">Effectif actif</div><div class="kpi-v">${DB.staff.filter(s=>s.actif).length}</div><div class="kpi-s">collaborateurs</div></div>
+    <div class="kpi b"><div class="kpi-l">Payés Marabu</div><div class="kpi-v">${DB.staff.filter(s=>s.marabu&&s.actif).length}</div><div class="kpi-s">sur ${DB.staff.filter(s=>s.actif).length} actifs</div></div>
+    <div class="kpi r"><div class="kpi-l">Masse salariale</div><div class="kpi-v">${fmt(totB)}</div><div class="kpi-s">FCFA base ${ml}</div></div>
+    <div class="kpi g"><div class="kpi-l">Versé ${ml}</div><div class="kpi-v">${fmt(totP)}</div><div class="kpi-s">FCFA payés</div></div>
+    <div class="kpi a"><div class="kpi-l">Reste à payer</div><div class="kpi-v">${fmt(totB-totP)}</div><div class="kpi-s">FCFA</div></div>
+  `;
+  $('sal-mkpi').innerHTML=`<span class="bdg bg">Versé: ${fmt(totP)}</span><span class="bdg ${totB-totP>0?'br':'bg'}">Reste: ${fmt(totB-totP)}</span>`;
+  $('sal-tb').textContent=fmt(totB);
+  $('sal-tp').textContent=fmt(totP);
+
+  $('sal-tbl').innerHTML=list.map(s=>{
+    const p=s.paie?s.paie[mk]||0:0;
+    const st=s.statut?s.statut[mk]||null:null;
+    const sc=st==='Payé'?'bg':st==='Partiellement payé'?'ba':st?'br':'bn';
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:7px">
+        <div class="av">${initials(s.nom)}</div><span class="fw7">${s.nom}</span>
+      </div></td>
+      <td style="font-size:11px;color:var(--tx2)">${s.poste}</td>
+      <td class="tnum">${fmt(s.sal)}</td>
+      <td class="tr"><input class="te te-num" type="number" value="${p||''}" style="width:90px"
+        onchange="DB.staff.find(x=>x.id===${s.id}).paie['${mk}']=parseFloat(this.value)||0;renderSal()"></td>
+      <td><select class="te" style="width:145px" onchange="DB.staff.find(x=>x.id===${s.id}).statut['${mk}']=this.value;renderSal()">
+        <option value="">—</option>
+        <option ${st==='Payé'?'selected':''}>Payé</option>
+        <option ${st==='Partiellement payé'?'selected':''}>Partiellement payé</option>
+        <option ${st==='À payer'?'selected':''}>À payer</option>
+        <option ${st==='Annulé'?'selected':''}>Annulé</option>
+      </select></td>
+      <td><span class="bdg bn" style="font-size:9.5px">${s.nature}</span></td>
+      <td style="text-align:center"><input type="checkbox" ${s.marabu?'checked':''} style="accent-color:var(--G);width:15px;height:15px;cursor:pointer"
+        onchange="DB.staff.find(x=>x.id===${s.id}).marabu=this.checked;renderSal()"></td>
+      <td style="text-align:center"><input type="checkbox" ${s.actif?'checked':''} style="accent-color:var(--G);width:15px;height:15px;cursor:pointer"
+        onchange="DB.staff.find(x=>x.id===${s.id}).actif=this.checked;renderSal()"></td>
+      <td style="font-size:11px">${s.debut||'—'}</td>
+      <td style="font-size:11px">${s.fin||'—'}</td>
+      <td style="display:flex;gap:3px">
+        <button class="ebt" onclick="openMod('mo-staff',${s.id})">✏</button>
+        <button class="ibt" onclick="delStaff(${s.id})">🗑</button>
+      </td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="11" class="empty">Aucun collaborateur</td></tr>';
+
+  // Historique annuel
+  $('sal-annuel').innerHTML=`<table><thead><tr>
+    <th>Collaborateur</th><th>Base</th>
+    ${MF.map(m=>`<th style="font-size:9.5px">${m.substring(0,3)}</th>`).join('')}
+    <th>Total versé</th>
+  </tr></thead><tbody>${DB.staff.map(s=>{
+    const cells=MK.map(k=>{
+      const p=s.paie?s.paie[k]:null;
+      const st=s.statut?s.statut[k]:null;
+      const bg=st==='Payé'?'background:rgba(27,94,64,.08)':p>0?'background:rgba(26,78,138,.06)':'';
+      return `<td style="font-size:10px;${bg}" class="tnum">${p?fmt(p):'—'}</td>`;
+    }).join('');
+    const tot=MK.reduce((s2,k)=>s2+(s.paie?s.paie[k]||0:0),0);
+    return `<tr>
+      <td style="display:flex;align-items:center;gap:6px;padding:6px 10px"><div class="av" style="width:24px;height:24px;font-size:9px">${initials(s.nom)}</div><span>${s.nom}</span></td>
+      <td class="tnum">${fmt(s.sal)}</td>${cells}
+      <td class="tnum tc fw7">${fmt(tot)}</td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function fillStaffForm(id) {
+  const s=DB.staff.find(x=>x.id===id); if(!s) return;
+  $('mo-staff-title').textContent='Modifier le collaborateur';
+  $('s-nom').value=s.nom; $('s-poste').value=s.poste; $('s-sal').value=s.sal;
+  $('s-nature').value=s.nature||'Consultant';
+  $('s-debut').value=s.debut||''; $('s-fin').value=s.fin||'';
+  $('s-marabu').checked=s.marabu; $('s-actif').checked=s.actif;
+}
+function saveStaff() {
+  const nom=$v('s-nom').trim().toUpperCase(),poste=$v('s-poste').trim();
+  if(!nom||!poste){alert('Nom et poste obligatoires');return;}
+  const data={nom,poste,sal:parseFloat($v('s-sal'))||0,nature:$v('s-nature'),
+    debut:$v('s-debut'),fin:$v('s-fin'),marabu:$('s-marabu').checked,actif:$('s-actif').checked};
+  if(_editId){const idx=DB.staff.findIndex(x=>x.id===_editId);if(idx>=0)DB.staff[idx]={...DB.staff[idx],...data};}
+  else{const p={};const st={};MK.forEach(k=>{p[k]=null;st[k]=null;});DB.staff.push({id:DB.nextId.staff++,...data,paie:p,statut:st});}
+  closeMod('mo-staff');renderSal();
+}
+function delStaff(id){if(!confirm('Supprimer ?'))return;DB.staff=DB.staff.filter(s=>s.id!==id);renderSal();}
+
+// ══════════════════════════════════════════════════════════════════
+//  CHARGES
+// ══════════════════════════════════════════════════════════════════
+function renderChg() {
+  const mi=parseInt($v('chg-mois'));
+  const mk=MK[mi]; const ml=MF[mi];
+  const fcat=$v('fil-chg-cat'),fty=$v('fil-chg-ty');
+  $('chg-title').textContent=`Charges — ${ml} 2026`;
+  let list=DB.charges.filter(c=>(!fcat||c.cat===fcat)&&(!fty||c.type===fty));
+
+  const totB=list.reduce((s,c)=>s+(c.budget||0),0);
+  const totR=list.reduce((s,c)=>s+(c.r?c.r[mk]||0:0),0);
+  const ecart=totR-totB;
+  $('chg-kpis').innerHTML=`
+    <div class="kpi a"><div class="kpi-l">Budget prévu</div><div class="kpi-v">${fmt(totB)}</div><div class="kpi-s">FCFA / mois</div></div>
+    <div class="kpi r"><div class="kpi-l">Réalisé ${ml}</div><div class="kpi-v">${fmt(totR)}</div><div class="kpi-s">FCFA payés</div></div>
+    <div class="kpi ${ecart>0?'r':'g'}"><div class="kpi-l">Écart</div><div class="kpi-v">${ecart>0?'+':''}${fmt(ecart)}</div><div class="kpi-s">${ecart>0?'Dépassement':'Économie'}</div></div>
+    <div class="kpi p"><div class="kpi-l">Imprévus</div><div class="kpi-v">${fmt(list.filter(c=>c.type==='imprevu').reduce((s,c)=>s+(c.r?c.r[mk]||0:0),0))}</div><div class="kpi-s">FCFA ce mois</div></div>
+    <div class="kpi t"><div class="kpi-l">Nb postes</div><div class="kpi-v">${list.filter(c=>c.type==='prevu').length}</div><div class="kpi-s">prévus + ${list.filter(c=>c.type==='imprevu').length} imprévus</div></div>
+  `;
+  $('chg-mkpi').innerHTML=`<span class="bdg ba">Budget: ${fmt(totB)}</span><span class="bdg ${ecart>0?'br':'bg'}">Réalisé: ${fmt(totR)}</span>`;
+  $('chg-tb').textContent=fmt(totB); $('chg-tr').textContent=fmt(totR);
+  const et=$('chg-te'); et.textContent=(ecart>0?'+':'')+fmt(ecart); et.className='tnum fw7 '+(ecart>0?'rc':'tc');
+
+  const catCls={RH:'bb',EXPLOIT:'bp',UTIL:'bg',VAR:'ba'};
+  $('chg-tbl').innerHTML=list.map(c=>{
+    const real=c.r?c.r[mk]||0:0;
+    const ec=real-(c.budget||0);
+    const st=c.st?c.st[mk]||'—':'—';
+    const dp=c.dp?c.dp[mk]||'':'';
+    const stC=st==='Payé'?'bg':st==='Partiellement payé'?'ba':st==='À payer'?'br':'bn';
+    const dep=c.budget>0&&real>c.budget;
+    return `<tr ${dep?'class="over"':''}>
+      <td class="fw7">${c.lib}</td>
+      <td><span class="bdg ${catCls[c.cat]||'bn'}" style="font-size:9.5px">${CAT_LBL[c.cat]||c.cat}</span></td>
+      <td><span class="bdg bn" style="font-size:9.5px">${c.nature}</span></td>
+      <td><span class="bdg ${c.type==='imprevu'?'br':'bg'}" style="font-size:9.5px">${c.type==='imprevu'?'⚡ Imprévu':'✓ Prévu'}</span></td>
+      <td><span class="bdg bn" style="font-size:9.5px">${c.per}</span></td>
+      <td class="tnum ac">${fmt(c.budget||0)}</td>
+      <td class="tr"><input class="te te-num" type="number" value="${real||''}" style="width:90px"
+        onchange="DB.charges.find(x=>x.id===${c.id}).r['${mk}']=parseFloat(this.value)||0;renderChg()"></td>
+      <td class="tnum fw7 ${ec>0?'rc':ec<0?'tc':''}">${ec>0?'+':''}${fmt(ec)}</td>
+      <td><select class="te" style="width:140px" onchange="DB.charges.find(x=>x.id===${c.id}).st['${mk}']=this.value">
+        <option ${st==='Payé'?'selected':''}>Payé</option>
+        <option ${st==='Partiellement payé'?'selected':''}>Partiellement payé</option>
+        <option ${st==='À payer'?'selected':''}>À payer</option>
+        <option ${st==='En attente'?'selected':''}>En attente</option>
+        <option ${st==='Annulé'?'selected':''}>Annulé</option>
+      </select></td>
+      <td><input class="te" type="date" value="${dp}" style="width:115px"
+        onchange="DB.charges.find(x=>x.id===${c.id}).dp['${mk}']=this.value"></td>
+      <td style="font-size:11px;color:var(--tx3);max-width:120px">${c.obs||''}</td>
+      <td style="display:flex;gap:3px">
+        <button class="ebt" onclick="openMod('mo-chg',${c.id})">✏</button>
+        <button class="ibt" onclick="delChg(${c.id})">🗑</button>
+      </td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="12" class="empty">Aucun poste de charge</td></tr>';
+
+  // Graphique charges
+  destroyC('chg');
+  const ctx=$('ch-chg')?.getContext('2d');
+  if(ctx){
+    const budgets=MF.map(()=>DB.charges.reduce((s,c)=>s+(c.budget||0),0));
+    const reels=MK.map(k=>DB.charges.reduce((s,c)=>s+(c.r?c.r[k]||0:0),0));
+    const impr=MK.map(k=>DB.charges.filter(c=>c.type==='imprevu').reduce((s,c)=>s+(c.r?c.r[k]||0:0),0));
+    CHARTS['chg']=new Chart(ctx,{type:'bar',data:{labels:MF.map(m=>m.substring(0,3)),datasets:[
+      {label:'Budget prévu',data:budgets,backgroundColor:'rgba(181,98,10,.35)',borderColor:'#B5620A',borderWidth:1},
+      {label:'Charges réalisées',data:reels,backgroundColor:'rgba(181,58,42,.45)',borderColor:'#B53A2A',borderWidth:1},
+      {label:'dont imprévus',data:impr,backgroundColor:'rgba(91,63,160,.4)',borderColor:'#5B3FA0',borderWidth:1},
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8}}},scales:{y:{ticks:{callback:v=>Math.round(v/1000000)+'M',font:{size:10}},grid:{color:'rgba(0,0,0,.04)'}}}}});
+  }
+
+  // Budget annuel
+  $('chg-annuel').innerHTML=`<table><thead><tr>
+    <th>Poste</th><th>Cat.</th><th>Type</th><th>Budget</th>
+    ${MF.map(m=>`<th style="font-size:9.5px">${m.substring(0,3)}</th>`).join('')}
+    <th>Total réalisé</th>
+  </tr></thead><tbody>${DB.charges.map(c=>{
+    const moisC=MK.map(k=>{
+      const r=c.r?c.r[k]||0:0; const dep=r>(c.budget||0)&&c.budget>0;
+      return `<td style="font-size:10px;${dep?'color:var(--R);font-weight:700':r>0?'color:var(--G)':''}" class="tnum">${r?fmt(r):'—'}</td>`;
+    }).join('');
+    const tot=MK.reduce((s,k)=>s+(c.r?c.r[k]||0:0),0);
+    return `<tr><td class="fw7">${c.lib}</td>
+      <td><span class="bdg ${catCls[c.cat]||'bn'}" style="font-size:9px">${c.cat}</span></td>
+      <td><span class="bdg ${c.type==='imprevu'?'br':'bg'}" style="font-size:9px">${c.type==='imprevu'?'Imp.':'Prév.'}</span></td>
+      <td class="tnum ac">${fmt(c.budget||0)}</td>${moisC}
+      <td class="tnum rc fw7">${fmt(tot)}</td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function fillChgForm(id){
+  const c=DB.charges.find(x=>x.id===id);if(!c)return;
+  $('mo-chg-title').textContent='Modifier le poste';
+  $('c-lib').value=c.lib; $('c-cat').value=c.cat; $('c-nature').value=c.nature;
+  $('c-type').value=c.type; $('c-mnt').value=c.budget||0;
+  $('c-per').value=c.per; $('c-obs').value=c.obs||'';
+}
+function saveChg(){
+  const lib=$v('c-lib').trim();if(!lib){alert('Libellé obligatoire');return;}
+  const r={};const st={};const dp={};MK.forEach(k=>{r[k]=0;st[k]='À payer';dp[k]='';});
+  const data={lib,cat:$v('c-cat'),nature:$v('c-nature'),type:$v('c-type'),budget:parseFloat($v('c-mnt'))||0,per:$v('c-per'),obs:$v('c-obs')};
+  if(_editId){const idx=DB.charges.findIndex(x=>x.id===_editId);if(idx>=0)DB.charges[idx]={...DB.charges[idx],...data};}
+  else DB.charges.push({id:DB.nextId.charge++,...data,r,st,dp});
+  closeMod('mo-chg');renderChg();
+}
+function delChg(id){if(!confirm('Supprimer ?'))return;DB.charges=DB.charges.filter(c=>c.id!==id);renderChg();}
+
+// ══════════════════════════════════════════════════════════════════
+//  DÉPENSES BANQUE
+// ══════════════════════════════════════════════════════════════════
+let _depPer='tout';
+function renderDep(){
+  const ft=$v('fil-dep-t'),fc=$v('fil-dep-c'),fn=$v('fil-dep-n');
+  let list=DB.depenses.filter(d=>{
+    if(!d.type.includes('BANQUE'))return false;
+    if(_depPer!=='tout'&&d.per!==_depPer)return false;
+    if(ft&&d.type!==ft)return false;
+    if(fc&&d.cat!==fc)return false;
+    if(fn&&d.nature!==fn)return false;
+    return true;
+  });
+  const pers=['tout',...new Set(DB.depenses.filter(d=>d.type.includes('BANQUE')&&d.per).map(d=>d.per))];
+  $('dep-pb').innerHTML=`<span style="font-size:11.5px;color:var(--tx3)">Période :</span>`+
+    pers.map(p=>`<button class="pb-btn ${_depPer===p?'on':''}" onclick="_depPer='${p}';renderDep()">${p==='tout'?'Tout':p}</button>`).join('');
+  const e=list.filter(d=>d.credit>0).reduce((s,d)=>s+d.credit,0);
+  const s=list.filter(d=>d.debit>0).reduce((s,d)=>s+d.debit,0);
+  $('dep-kpis').innerHTML=`
+    <div class="kpi g"><div class="kpi-l">Total entrées</div><div class="kpi-v">${fmt(e)}</div><div class="kpi-s">FCFA</div></div>
+    <div class="kpi r"><div class="kpi-l">Total sorties</div><div class="kpi-v">${fmt(s)}</div><div class="kpi-s">FCFA</div></div>
+    <div class="kpi ${e-s>=0?'g':'r'}"><div class="kpi-l">Solde période</div><div class="kpi-v">${fmtS(e-s)}</div><div class="kpi-s">FCFA</div></div>
+    <div class="kpi"><div class="kpi-l">Opérations</div><div class="kpi-v">${list.length}</div><div class="kpi-s">transactions</div></div>
+  `;
+  $('dep-tbl').innerHTML=list.map(d=>{
+    const isE=d.credit>0;
+    return `<tr>
+      <td style="font-size:11px;white-space:nowrap">${d.date}</td>
+      <td><span class="bdg bn" style="font-size:9.5px">${d.per||'—'}</span></td>
+      <td><span class="bdg ${isE?'bg':'br'}" style="font-size:9.5px">${d.type.replace(' BANQUE','')}</span></td>
+      <td><span class="bdg bn" style="font-size:9px;max-width:100px;white-space:normal">${d.cat}</span></td>
+      <td><span class="bdg ${d.nature==='imprevu'?'br':'bn'}" style="font-size:9px">${d.nature==='imprevu'?'⚡ Imp.':'Prévu'}</span></td>
+      <td>${d.des}${d.int&&d.int!==d.des?`<div style="font-size:10px;color:var(--tx3)">${d.int}</div>`:''}</td>
+      <td style="font-size:11px;color:var(--tx2)">${d.prest||'—'}</td>
+      <td class="tnum fw7 ${isE?'tc':'rc'}">${isE?'+':'-'}${fmt(isE?d.credit:d.mnt)}</td>
+      <td class="tnum" style="font-size:11px;color:var(--tx3)">${d.ft>0?fmt(d.ft):'—'}</td>
+      <td class="tnum" style="font-size:11px;color:var(--tx3)">${d.pen>0?fmt(d.pen):'—'}</td>
+      <td class="mono" style="font-size:11px">${d.ref||'—'}</td>
+      <td>${d.doc&&d.doc.length?`<span class="bdg bb" style="font-size:9px">📎 ${d.doc.length}</span>`:`<label class="bdg bn" style="cursor:pointer;font-size:9px"><input type="file" accept=".pdf,image/*" style="display:none" onchange="DB.depenses.find(x=>x.id===${d.id}).doc.push(...Array.from(this.files).map(f=>f.name));renderDep()">+ Doc</label>`}</td>
+      <td style="display:flex;gap:3px">
+        <button class="ebt" onclick="editDep(${d.id})">✏</button>
+        <button class="ibt" onclick="delDep(${d.id})">🗑</button>
+      </td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="13" class="empty">Aucune opération</td></tr>';
+}
+function editDep(id){
+  openMod('mo-dep',id);
+  const d=DB.depenses.find(x=>x.id===id);if(!d)return;
+  $('d-type').value=d.type;$('d-cat').value=d.cat;$('d-nature').value=d.nature;$('d-per').value=d.per;
+  $('d-date').value=d.date;$('d-int').value=d.int||'';$('d-des').value=d.des;$('d-prest').value=d.prest;
+  $('d-mnt').value=d.mnt;$('d-ft').value=d.ft;$('d-pen').value=d.pen;$('d-ref').value=d.ref;
+}
+function saveDep(){
+  const des=$v('d-des').trim();if(!des){alert('Désignation obligatoire');return;}
+  const type=$v('d-type');const isE=type==='ENTREE BANQUE';
+  const mnt=parseFloat($v('d-mnt'))||0;const ft=parseFloat($v('d-ft'))||0;
+  const data={type,cat:$v('d-cat'),nature:$v('d-nature'),per:$v('d-per'),
+    int:$v('d-int'),date:$v('d-date'),des,prest:$v('d-prest'),
+    mnt,credit:isE?mnt:0,debit:isE?0:mnt+ft,
+    ft,pen:parseFloat($v('d-pen'))||0,ref:$v('d-ref'),doc:[]};
+  if(_editId){const idx=DB.depenses.findIndex(x=>x.id===_editId);if(idx>=0)DB.depenses[idx]={...DB.depenses[idx],...data};}
+  else DB.depenses.push({id:DB.nextId.dep++,...data});
+  closeMod('mo-dep');renderDep();
+}
+function delDep(id){if(!confirm('Supprimer ?'))return;DB.depenses=DB.depenses.filter(d=>d.id!==id);renderDep();}
+
+// ══════════════════════════════════════════════════════════════════
+//  PETITE CAISSE
+// ══════════════════════════════════════════════════════════════════
+let _pcPer='tout';
+function renderPC(){
+  const fc=$v('fil-pc-c');
+  let list=DB.petite_caisse.filter(p=>(_pcPer==='tout'||p.per===_pcPer)&&(!fc||p.caisse===fc));
+  const pers=['tout',...new Set(DB.petite_caisse.map(p=>p.per).filter(Boolean))];
+  $('pc-pb').innerHTML=`<span style="font-size:11.5px;color:var(--tx3)">Période :</span>`+
+    pers.map(p=>`<button class="pb-btn ${_pcPer===p?'on':''}" onclick="_pcPer='${p}';renderPC()">${p==='tout'?'Tout':p}</button>`).join('');
+  const totE=list.reduce((s,p)=>s+p.entree,0);
+  const totS=list.reduce((s,p)=>s+p.sortie,0);
+  $('pc-kpis').innerHTML=`
+    <div class="kpi g"><div class="kpi-l">Entrées caisse</div><div class="kpi-v">${fmt(totE)}</div><div class="kpi-s">FCFA</div></div>
+    <div class="kpi r"><div class="kpi-l">Sorties caisse</div><div class="kpi-v">${fmt(totS)}</div><div class="kpi-s">FCFA</div></div>
+    <div class="kpi ${totE-totS>=0?'g':'r'}"><div class="kpi-l">Solde actuel</div><div class="kpi-v">${fmt(totE-totS)}</div><div class="kpi-s">FCFA en caisse</div></div>
+    <div class="kpi p"><div class="kpi-l">Nb pièces</div><div class="kpi-v">${list.length}</div><div class="kpi-s">opérations</div></div>
+    <div class="kpi a"><div class="kpi-l">Imprévus</div><div class="kpi-v">${fmt(list.filter(p=>p.nature==='imprevu').reduce((s,p)=>s+p.sortie,0))}</div><div class="kpi-s">FCFA non planifiés</div></div>
+  `;
+  $('pc-tbl').innerHTML=list.map(p=>`<tr>
+    <td><span class="pc-num">${p.num}</span></td>
+    <td style="font-size:11px;white-space:nowrap">${p.date}</td>
+    <td><span class="bdg ${p.caisse==='PRINCIPALE'?'bb':'bp'}" style="font-size:9.5px">${p.caisse}</span></td>
+    <td><span class="bdg ${p.type==='entree'?'bg':'br'}" style="font-size:9.5px">${p.type==='entree'?'Entrée':'Sortie'}</span></td>
+    <td style="font-size:11px;color:var(--tx3)">${p.cat}</td>
+    <td><span class="bdg ${p.nature==='imprevu'?'br':'bn'}" style="font-size:9px">${p.nature==='imprevu'?'⚡ Imprévu':'Prévu'}</span></td>
+    <td>${p.des}</td>
+    <td style="font-size:11px;color:var(--tx2)">${p.prest||'—'}</td>
+    <td class="tnum tc">${p.entree>0?'+'+fmt(p.entree):'—'}</td>
+    <td class="tnum rc">${p.sortie>0?'-'+fmt(p.sortie):'—'}</td>
+    <td class="tnum" style="font-size:11px;color:var(--tx3)">${p.pen>0?fmt(p.pen):'—'}</td>
+    <td class="tnum fw7">${fmt(p.solde)}</td>
+    <td>${p.doc&&p.doc.length?`<span class="bdg bb" style="font-size:9px">📎 ${p.doc.length}</span>`:`<label class="bdg bn" style="cursor:pointer;font-size:9px"><input type="file" accept=".pdf,image/*" style="display:none" onchange="DB.petite_caisse.find(x=>x.id===${p.id}).doc.push(...Array.from(this.files).map(f=>f.name));renderPC()">+ Scan</label>`}</td>
+    <td style="display:flex;gap:3px">
+      <button class="ebt" onclick="editPC(${p.id})">✏</button>
+      <button class="ibt" onclick="delPC(${p.id})">🗑</button>
+    </td>
+  </tr>`).join('')||'<tr><td colspan="14" class="empty">Aucune pièce de caisse</td></tr>';
+
+  destroyC('pc');
+  const ctx=$('ch-pc')?.getContext('2d');
+  if(ctx){
+    const byCaisse=caisse=>MK.map((_,i)=>{
+      const per=MF[i].toUpperCase().substring(0,3);
+      return DB.petite_caisse.filter(p=>p.caisse===caisse&&(p.per.startsWith(per)||MF[i].toUpperCase().startsWith(p.per.substring(0,4))));
+    });
+    const labels=MF.map(m=>m.substring(0,3));
+    const eP=MK.map((_,i)=>{const mo=MF[i];return DB.petite_caisse.filter(p=>p.caisse==='PRINCIPALE'&&p.per===mo.toUpperCase()).reduce((s,p)=>s+p.entree,0);});
+    const sP=MK.map((_,i)=>{const mo=MF[i];return DB.petite_caisse.filter(p=>p.caisse==='PRINCIPALE'&&p.per===mo.toUpperCase()).reduce((s,p)=>s+p.sortie,0);});
+    const sB=MK.map((_,i)=>{const mo=MF[i];return DB.petite_caisse.filter(p=>p.caisse==='BEN SOUDA'&&p.per===mo.toUpperCase()).reduce((s,p)=>s+p.sortie,0);});
+    CHARTS['pc']=new Chart(ctx,{type:'bar',data:{labels,datasets:[
+      {label:'Entrées (toutes caisses)',data:eP,backgroundColor:'rgba(27,94,64,.5)',borderColor:'#1B5E40',borderWidth:1},
+      {label:'Sorties Principale',data:sP,backgroundColor:'rgba(181,58,42,.5)',borderColor:'#B53A2A',borderWidth:1},
+      {label:'Sorties Ben Souda',data:sB,backgroundColor:'rgba(91,63,160,.5)',borderColor:'#5B3FA0',borderWidth:1},
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:7}}},scales:{y:{ticks:{callback:v=>fmt(v),font:{size:10}},grid:{color:'rgba(0,0,0,.04)'}}}}});
+  }
+}
+function genPCNum(){
+  const y=new Date().getFullYear();
+  return `PC-${y}-${String(DB.nextId.pc).padStart(3,'0')}`;
+}
+function savePc(){
+  const des=$v('pc-des').trim();if(!des){alert('Désignation obligatoire');return;}
+  const type=$v('pc-type');const mnt=parseFloat($v('pc-mnt'))||0;const pen=parseFloat($v('pc-pen'))||0;
+  const caisse=$v('pc-caisse');
+  const prev=DB.petite_caisse.filter(p=>p.caisse===caisse).sort((a,b)=>b.id-a.id)[0];
+  const prevSolde=prev?prev.solde:0;
+  const newSolde=type==='entree'?prevSolde+mnt:prevSolde-(mnt+pen);
+  const data={num:genPCNum(),caisse,type,cat:$v('pc-cat'),nature:$v('pc-nature'),
+    per:$v('pc-per'),date:$v('pc-date'),des,prest:$v('pc-prest'),
+    entree:type==='entree'?mnt:0,sortie:type==='sortie'?mnt:0,pen,solde:newSolde,doc:[]};
+  if(_editId){const idx=DB.petite_caisse.findIndex(x=>x.id===_editId);if(idx>=0)DB.petite_caisse[idx]={...DB.petite_caisse[idx],...data};}
+  else{data.id=DB.nextId.pc++;DB.petite_caisse.push(data);}
+  closeMod('mo-pc');renderPC();
+}
+function editPC(id){
+  openMod('mo-pc',id);
+  const p=DB.petite_caisse.find(x=>x.id===id);if(!p)return;
+  $('pc-caisse').value=p.caisse;$('pc-type').value=p.type;$('pc-cat').value=p.cat;
+  $('pc-nature').value=p.nature;$('pc-per').value=p.per;$('pc-date').value=p.date;
+  $('pc-des').value=p.des;$('pc-prest').value=p.prest||'';$('pc-mnt').value=p.sortie||p.entree;$('pc-pen').value=p.pen;
+}
+function delPC(id){if(!confirm('Supprimer ?'))return;DB.petite_caisse=DB.petite_caisse.filter(p=>p.id!==id);renderPC();}
+
+// ══════════════════════════════════════════════════════════════════
+//  TRÉSORERIE
+// ══════════════════════════════════════════════════════════════════
+function renderTres(){
+  const totE=DB.tresorerie.reduce((s,m)=>s+m.entrees,0);
+  const totC=DB.tresorerie.reduce((s,m)=>s+m.chg_prev,0);
+  const totCP=DB.tresorerie.reduce((s,m)=>s+m.chg_pay,0);
+  $('tres-kpis').innerHTML=`
+    <div class="kpi g"><div class="kpi-l">Tréso actuelle</div><div class="kpi-v">${fmt(DB.params.banque+DB.params.coffre)}</div><div class="kpi-s">Banque + Coffre</div></div>
+    <div class="kpi b"><div class="kpi-l">Entrées YTD</div><div class="kpi-v">${fmt(totE)}</div><div class="kpi-s">Missions 2026</div></div>
+    <div class="kpi r"><div class="kpi-l">Budget charges</div><div class="kpi-v">${fmt(totC)}</div><div class="kpi-s">Annuel 2026</div></div>
+    <div class="kpi a"><div class="kpi-l">Charges payées</div><div class="kpi-v">${fmt(totCP)}</div><div class="kpi-s">YTD réalisé</div></div>
+  `;
+  $('tres-te').textContent=fmt(totE);
+  $('tres-tc').textContent=fmt(totC);
+  $('tres-tcp').textContent=fmt(totCP);
+
+  $('tres-tbl').innerHTML=DB.tresorerie.map((m,i)=>{
+    const bfr=m.entrees-m.chg_prev;
+    const isR=m.type==='reel';
+    return `<tr>
+      <td class="fw7">${m.mois}</td>
+      <td><span class="bdg ${isR?'bg':'ba'}" style="font-size:9.5px">${isR?'Réel':'Prévision'}</span></td>
+      <td class="tr"><input class="te te-num" type="number" value="${m.banque||0}" style="width:110px"
+        onchange="DB.tresorerie[${i}].banque=parseFloat(this.value)||0;renderTres()"></td>
+      <td class="tr"><input class="te te-num" type="number" value="${m.coffre||0}" style="width:80px"
+        onchange="DB.tresorerie[${i}].coffre=parseFloat(this.value)||0"></td>
+      <td class="tr"><input class="te te-num" type="number" value="${m.entrees||0}" style="width:110px"
+        onchange="DB.tresorerie[${i}].entrees=parseFloat(this.value)||0;renderTres()"></td>
+      <td class="tr"><input class="te te-num" type="number" value="${m.chg_prev||0}" style="width:100px"
+        onchange="DB.tresorerie[${i}].chg_prev=parseFloat(this.value)||0;renderTres()"></td>
+      <td class="tr"><input class="te te-num" type="number" value="${m.chg_pay||0}" style="width:100px"
+        onchange="DB.tresorerie[${i}].chg_pay=parseFloat(this.value)||0"></td>
+      <td class="tnum ${m.reste>0?'rc':''}">${fmt(m.reste||0)}</td>
+      <td class="tnum fw7 ${bfr>=0?'tc':'rc'}">${bfr>=0?'+':''}${fmt(bfr)}</td>
+      <td><button class="ibt" onclick="DB.tresorerie.splice(${i},1);renderTres()">🗑</button></td>
+    </tr>`;
+  }).join('');
+
+  destroyC('tres');destroyC('tres2');
+  const ctxT=$('ch-tres')?.getContext('2d');
+  if(ctxT){
+    const e=DB.tresorerie.map(m=>m.entrees);
+    const cp=DB.tresorerie.map(m=>m.chg_prev);
+    const cr=DB.tresorerie.map(m=>m.chg_pay);
+    CHARTS['tres']=new Chart(ctxT,{type:'bar',data:{labels:DB.tresorerie.map(m=>m.mois.substring(0,3)),datasets:[
+      {label:'Entrées missions',data:e,backgroundColor:'rgba(27,94,64,.55)',borderColor:'#1B5E40',borderWidth:1},
+      {label:'Charges prévues',data:cp,type:'line',borderColor:'#B5620A',pointRadius:3,tension:.3,backgroundColor:'transparent',borderWidth:2},
+      {label:'Charges payées',data:cr,type:'line',borderColor:'#B53A2A',pointRadius:3,tension:.3,backgroundColor:'transparent',borderWidth:2,borderDash:[5,4]},
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8}}},scales:{y:{ticks:{callback:v=>Math.round(v/1000000)+'M',font:{size:10}},grid:{color:'rgba(0,0,0,.04)'}}}}});
+  }
+  const ctxT2=$('ch-tres2')?.getContext('2d');
+  if(ctxT2){
+    let cum=0;
+    const cumuls=DB.tresorerie.map(m=>{cum+=m.entrees-m.chg_pay;return cum;});
+    const bfrs=DB.tresorerie.map(m=>Math.max(0,m.chg_prev-m.entrees));
+    CHARTS['tres2']=new Chart(ctxT2,{type:'bar',data:{labels:DB.tresorerie.map(m=>m.mois.substring(0,3)),datasets:[
+      {label:'Tréso cumulée',data:cumuls,backgroundColor:'rgba(26,78,138,.4)',borderColor:'#1A4E8A',borderWidth:1},
+      {label:'BFR mensuel',data:bfrs,type:'line',borderColor:'#B53A2A',pointRadius:3,tension:.3,backgroundColor:'transparent'},
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:7}}},scales:{y:{ticks:{callback:v=>Math.round(v/1000000)+'M',font:{size:10}},grid:{color:'rgba(0,0,0,.04)'}}}}});
+  }
+}
+function addTresMois(){
+  DB.tresorerie.push({mois:'Nouveau mois',type:'prevision',banque:0,coffre:0,entrees:0,chg_prev:8295000,chg_pay:0,reste:8295000});
+  renderTres();
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  BFR PRÉVISIONNEL
+// ══════════════════════════════════════════════════════════════════
+function renderBFRTable(){
+  const tfoot=`<tr style="background:var(--sur2)"><td colspan="3" class="fw7" style="padding:7px 10px">TOTAL / MOIS</td>
+    ${MK.map((k,i)=>`<td class="tnum tc fw7" id="bfr-tot-${i}"></td>`).join('')}</tr>`;
+  $('bfr-m-tbl').innerHTML=DB.missions.map(m=>`<tr>
+    <td class="fw7">${m.nom}</td>
+    <td style="font-size:11px;color:var(--tx3)">${m.client}</td>
+    <td class="tnum">${fmt(m.montant)}</td>
+    ${MK.map((k,i)=>`<td class="tr"><input class="te te-num" type="number" value="${m.enc?m.enc[k]||0:0}" style="width:70px;font-size:11px"
+      onchange="DB.missions.find(x=>x.id===${m.id}).enc['${k}']=parseFloat(this.value)||0;calcBFR()"></td>`).join('')}
+  </tr>`).join('');
+  $('bfr-m-foot').innerHTML=tfoot;
+}
+
+function calcBFR(){
+  const t0=parseFloat($v('bfr-t0'))||0;
+  const chg=parseFloat($v('bfr-c'))||0;
+  const rx=parseFloat($v('bfr-rx'))||0;
+  const hor=parseInt($v('bfr-hor'))||6;
+  // Màj totaux colonnes
+  MK.forEach((k,i)=>{
+    const tot=DB.missions.reduce((s,m)=>s+(m.enc?m.enc[k]||0:0),0);
+    const el=$('bfr-tot-'+i);if(el)el.textContent=tot>0?fmt(tot):'—';
+  });
+
+  const rows=[];let s=t0;let crit=null;
+  for(let i=0;i<hor;i++){
+    const k=MK[i];
+    const enc=DB.missions.reduce((s2,m)=>s2+(m.enc?m.enc[k]||0:0),0);
+    const rev=enc+rx;
+    const debut=s;const fin=debut+rev-chg;
+    const bfr=fin<0?-fin:0;
+    if(fin<=0&&crit===null)crit=i+1;
+    rows.push({mois:MF[i],debut,rev,chg,fin,bfr});
+    s=Math.max(fin,0);
+  }
+
+  const finSolde=rows[rows.length-1].fin;
+  const totBes=rows.reduce((s,r)=>s+r.bfr,0);
+  const couv=chg>0?(t0/chg).toFixed(1):'∞';
+  $('bfr-ind').innerHTML=`<div style="display:flex;flex-direction:column;gap:12px">
+    ${[
+      {l:'Tréso initiale',v:fmt(t0)+' FCFA',c:''},
+      {l:'Couverture actuelle',v:couv+' mois',c:''},
+      {l:'Point de rupture',v:crit?'Mois '+crit:'Pas de rupture sur la période',c:crit?'rc':'tc'},
+      {l:'Solde fin de période',v:(finSolde>=0?'+':'')+fmt(finSolde)+' FCFA',c:finSolde>=0?'tc':'rc'},
+      {l:'Besoin financement total',v:totBes>0?fmt(totBes)+' FCFA':'Aucun',c:totBes>0?'ac':''},
+      {l:'Total revenus attendus',v:fmt(rows.reduce((s,r)=>s+r.rev,0))+' FCFA',c:'bc'},
+    ].map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">
+      <span style="color:var(--tx2)">${x.l}</span>
+      <span class="mono fw7 ${x.c}">${x.v}</span>
+    </div>`).join('')}
+  </div>`;
+
+  $('bfr-tbl').innerHTML=rows.map(r=>{
+    const sc=r.fin>r.chg?'bg':r.fin>0?'ba':'br';
+    const sl=r.fin>r.chg?'Confortable':r.fin>0?'Tendu':'Critique';
+    return `<tr>
+      <td class="fw7">${r.mois}</td>
+      <td class="tnum">${fmt(r.debut)}</td>
+      <td class="tnum tc">+${fmt(r.rev)}</td>
+      <td class="tnum rc">-${fmt(r.chg)}</td>
+      <td class="tnum fw7 ${r.fin>=0?'tc':'rc'}">${r.fin>=0?'+':''}${fmt(r.fin)}</td>
+      <td class="tnum ${r.bfr>0?'rc':''}">${r.bfr>0?fmt(r.bfr):'—'}</td>
+      <td><span class="bdg ${sc}">${sl}</span></td>
+    </tr>`;
+  }).join('');
+
+  destroyC('bfr');
+  const ctx=$('ch-bfr')?.getContext('2d');
+  if(ctx){
+    CHARTS['bfr']=new Chart(ctx,{type:'bar',data:{labels:rows.map(r=>r.mois.substring(0,3)),datasets:[
+      {label:'Tréso fin de mois',data:rows.map(r=>Math.max(r.fin,0)),backgroundColor:'rgba(27,94,64,.45)',borderColor:'#1B5E40',borderWidth:1},
+      {label:'BFR',data:rows.map(r=>r.bfr),backgroundColor:'rgba(181,58,42,.45)',borderColor:'#B53A2A',borderWidth:1},
+      {label:'Revenus missions',data:rows.map(r=>r.rev),type:'line',borderColor:'#1A4E8A',pointRadius:4,tension:.3,backgroundColor:'transparent',borderWidth:2},
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8}}},scales:{y:{ticks:{callback:v=>Math.round(v/1000000)+'M',font:{size:10}},grid:{color:'rgba(0,0,0,.04)'}}}}});
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  TVA
+// ══════════════════════════════════════════════════════════════════
+function renderTVA(){
+  const assuj=DB.missions.filter(m=>m.tva==='18');
+  const totTVA=assuj.reduce((s,m)=>s+m.avance*18/118,0);
+  const totHT=assuj.reduce((s,m)=>s+m.avance*100/118,0);
+  const totTTC=assuj.reduce((s,m)=>s+m.avance,0);
+  $('tva-kpis').innerHTML=`
+    <div class="kpi b"><div class="kpi-l">HT encaissé (assujetti)</div><div class="kpi-v">${fmt(totHT)}</div><div class="kpi-s">FCFA</div></div>
+    <div class="kpi r"><div class="kpi-l">TVA collectée</div><div class="kpi-v">${fmt(totTVA)}</div><div class="kpi-s">FCFA à reverser DGI</div></div>
+    <div class="kpi"><div class="kpi-l">TTC encaissé</div><div class="kpi-v">${fmt(totTTC)}</div><div class="kpi-s">FCFA</div></div>
+    <div class="kpi t"><div class="kpi-l">Missions exonérées</div><div class="kpi-v">${DB.missions.filter(m=>m.tva==='exo').length}</div><div class="kpi-s">pas de TVA</div></div>
+  `;
+  $('tva-tbl').innerHTML=assuj.map(m=>{
+    const ht=Math.round(m.avance*100/118);const tva=Math.round(m.avance*18/118);
+    return `<tr>
+      <td class="fw7">${m.nom}</td>
+      <td style="font-size:11px;color:var(--tx2)">${m.client}</td>
+      <td class="tnum">${fmt(m.avance)}</td>
+      <td class="tnum bc">${fmt(ht)}</td>
+      <td class="tnum rc fw7">${fmt(tva)}</td>
+      <td><span class="bdg ba">À déclarer</span></td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="6" class="empty">Aucune mission assujettie à la TVA</td></tr>';
+
+  $('tva-m-tbl').innerHTML=MF.map((label,i)=>{
+    const k=MK[i];
+    const encTTC=DB.missions.filter(m=>m.tva==='18').reduce((s,m)=>s+(m.enc?m.enc[k]||0:0),0);
+    const tva=Math.round(encTTC*18/118);
+    return `<tr>
+      <td class="fw7">${label}</td>
+      <td class="tnum">${fmt(encTTC)}</td>
+      <td class="tnum rc fw7">${encTTC>0?fmt(tva):'—'}</td>
+      <td>${encTTC>0?'<span class="bdg ba">À reverser</span>':'<span class="bdg bn">Aucun</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  PARAMÈTRES
+// ══════════════════════════════════════════════════════════════════
+function syncP(){
+  DB.params.banque=parseFloat($v('p-bq'))||0;
+  DB.params.coffre=parseFloat($v('p-cf'))||0;
+  DB.params.masse_sal=parseFloat($v('p-ms'))||0;
+  DB.params.charges_pat=parseFloat($v('p-cp'))||0;
+  DB.params.arr_sal=parseFloat($v('p-as'))||0;
+  DB.params.arr_sal_r=parseFloat($v('p-as-r'))||0;
+  DB.params.arr_sal_m=parseFloat($v('p-as-m'))||0;
+  DB.params.arr_prim=parseFloat($v('p-ap'))||0;
+  DB.params.arr_prim_m=parseFloat($v('p-ap-m'))||0;
+}
+function renderParams(){
+  const PARAM_REF=[
+    {lib:'Solde banque (actuel)',val:DB.params.banque,per:'Instantané',rem:'Disponible en banque'},
+    {lib:'Solde coffre-fort',val:DB.params.coffre,per:'Instantané',rem:'Espèces disponibles'},
+    {lib:'Masse salariale brute mensuelle',val:4980000,per:'Mensuelle',rem:'Salaires de base tous employés'},
+    {lib:'Charges patronales',val:'0%',per:'Mensuelle',rem:'CNPS + charges patronales'},
+    {lib:'Primes mensuelles régulières',val:0,per:'Mensuelle',rem:'Primes fixes récurrentes'},
+    {lib:'Arriéré salaires (cumul dû)',val:3000000,per:'—',rem:'Montant total impayé'},
+    {lib:'Mensualité remboursement arriéré',val:1500000,per:'Mensuelle',rem:'Versement mensuel pour apurement'},
+    {lib:'Loyer (locaux)',val:3300000,per:'Trimestrielle',rem:'Périodicité réelle à préciser'},
+    {lib:'Carburant véhicules',val:200000,per:'Mensuelle',rem:'Parc auto'},
+    {lib:'Entretien véhicules & équip.',val:100000,per:'Mensuelle',rem:'Révisions, pièces'},
+    {lib:'Fournitures de bureau',val:100000,per:'Mensuelle',rem:'Papier, cartouches'},
+    {lib:'Téléphonie & internet',val:50000,per:'Mensuelle',rem:'Abonnements opérateurs'},
+    {lib:'Abonnement logiciels',val:450000,per:'Mensuelle',rem:''},
+    {lib:'CIE – Électricité',val:160000,per:'Mensuelle',rem:'Consommation estimée'},
+    {lib:'SODECI – Eau',val:10000,per:'Mensuelle',rem:''},
+    {lib:'Eau en bonbonnes',val:30000,per:'Mensuelle',rem:'Usage bureau'},
+    {lib:'Café',val:50000,per:'Mensuelle',rem:''},
+    {lib:'Thé',val:10000,per:'Mensuelle',rem:''},
+    {lib:'Sucre, lait & consommables',val:5000,per:'Mensuelle',rem:''},
+  ];
+  $('param-tbl').innerHTML=PARAM_REF.map(r=>`<tr>
+    <td>${r.lib}</td>
+    <td class="tnum fw7">${typeof r.val==='number'?fmt(r.val):r.val}</td>
+    <td><span class="bdg bn" style="font-size:9.5px">${r.per}</span></td>
+    <td style="font-size:11px;color:var(--tx3)">${r.rem}</td>
+  </tr>`).join('');
+
+  const arrSolde=DB.params.arr_sal-DB.params.arr_sal_r;
+  const arrPct=DB.params.arr_sal>0?Math.round(DB.params.arr_sal_r/DB.params.arr_sal*100):0;
+  const nbMois=DB.params.arr_sal_m>0?Math.ceil(arrSolde/DB.params.arr_sal_m):0;
+  $('arr-tbl').innerHTML=`
+    <tr>
+      <td class="fw7">Arriéré de salaires</td>
+      <td class="tnum">${fmt(DB.params.arr_sal)}</td>
+      <td class="tnum tc">${fmt(DB.params.arr_sal_r)}</td>
+      <td class="tnum rc fw7">${fmt(arrSolde)}</td>
+      <td class="tnum">${fmt(DB.params.arr_sal_m)}</td>
+      <td class="tr">${nbMois}</td>
+      <td class="tr">${arrPct}%
+        <div class="prog"><div class="prog-b" style="width:${arrPct}%;background:var(--G)"></div></div>
+      </td>
+    </tr>
+    <tr>
+      <td class="fw7">Arriéré de primes</td>
+      <td class="tnum">${fmt(DB.params.arr_prim)}</td>
+      <td class="tnum tc">0</td>
+      <td class="tnum rc fw7">${fmt(DB.params.arr_prim)}</td>
+      <td class="tnum">${fmt(DB.params.arr_prim_m)}</td>
+      <td class="tr">—</td><td class="tr">0%</td>
+    </tr>
+  `;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  EXPORT EXCEL
+// ══════════════════════════════════════════════════════════════════
+function exportExcel(type){
+  if(!window.XLSX){alert('Bibliothèque XLSX non chargée');return;}
+  const wb=XLSX.utils.book_new();
+  const addSheet=(data,name)=>{const ws=XLSX.utils.aoa_to_sheet(data);XLSX.utils.book_append_sheet(wb,ws,name);};
+
+  if(type==='missions'||type==='dashboard'){
+    addSheet([['Mission','Client','Apporteur','Statut','Montant HT','Avance','Reste à encaisser','Début','Fin','TVA','Nature'],
+      ...DB.missions.map(m=>[m.nom,m.client,m.apporteur||'—',ST_LABEL[m.statut]||m.statut,m.montant,m.avance,m.montant-m.avance,m.debut,m.fin,m.tva,m.nature])],'Missions');
+  }
+  if(type==='factures'||type==='dashboard'){
+    addSheet([['N° Facture','Mission','Date','HT','TVA','TTC'],
+      ...DB.factures.map(f=>{const m=DB.missions.find(x=>x.id===f.mis_id);return [f.num,m?.nom||'—',f.date,f.ht,f.tva_m,f.ttc];})],'Factures');
+    addSheet([['Mission','N° Facture','Tranche','Montant prévu','Échéance','Encaissé','Date enc.','Référence','Statut'],
+      ...DB.factures.flatMap(f=>{const m=DB.missions.find(x=>x.id===f.mis_id);return f.tranches.map(t=>[m?.nom||'—',f.num,'T'+t.num,t.mnt,t.ech,t.enc,t.date_enc,t.ref,t.statut]);})],'Encaissements');
+  }
+  if(type==='salaires'||type==='dashboard'){
+    addSheet([['Collaborateur','Poste','Salaire base','Nature','Marabu','Actif',...MF,'Total versé'],
+      ...DB.staff.map(s=>{const p=MK.map(k=>s.paie?s.paie[k]||0:0);return[s.nom,s.poste,s.sal,s.nature,s.marabu?'Oui':'Non',s.actif?'Oui':'Non',...p,p.reduce((a,b)=>a+b,0)];})],'Salaires');
+  }
+  if(type==='charges'||type==='dashboard'){
+    addSheet([['Poste','Catégorie','Nature','Type','Budget mensuel',...MF,'Total réalisé'],
+      ...DB.charges.map(c=>{const r=MK.map(k=>c.r?c.r[k]||0:0);return[c.lib,c.cat,c.nature,c.type,c.budget||0,...r,r.reduce((a,b)=>a+b,0)];})],'Charges');
+  }
+  if(type==='depenses'||type==='dashboard'){
+    addSheet([['Date','Période','Type','Catégorie','Nature','Désignation','Prestataire','Montant','Crédit','Débit','Frais','Pénalité','Référence'],
+      ...DB.depenses.filter(d=>d.type.includes('BANQUE')).map(d=>[d.date,d.per,d.type,d.cat,d.nature,d.des,d.prest,d.mnt,d.credit,d.debit,d.ft,d.pen,d.ref])],'Dépenses banque');
+  }
+  if(type==='petite-caisse'||type==='dashboard'){
+    addSheet([['N° Pièce','Date','Caisse','Type','Catégorie','Nature','Désignation','Prestataire','Entrée','Sortie','Pénalité','Solde'],
+      ...DB.petite_caisse.map(p=>[p.num,p.date,p.caisse,p.type,p.cat,p.nature,p.des,p.prest,p.entree,p.sortie,p.pen,p.solde])],'Petite caisse');
+  }
+  if(type==='tresorerie'||type==='dashboard'){
+    addSheet([['Mois','Type','Solde banque','Solde coffre','Entrées','Charges prévues','Charges payées','Reste','BFR'],
+      ...DB.tresorerie.map(m=>[m.mois,m.type,m.banque,m.coffre,m.entrees,m.chg_prev,m.chg_pay,m.reste,m.entrees-m.chg_prev])],'Trésorerie');
+  }
+  if(type==='bfr'||type==='dashboard'){
+    const t0=parseFloat($v('bfr-t0'))||0;const chg=parseFloat($v('bfr-c'))||0;
+    addSheet([['Mois','Tréso début','Revenus missions','Charges','Tréso fin','BFR'],
+      ...MF.map((label,i)=>{const k=MK[i];const r=DB.missions.reduce((s,m)=>s+(m.enc?m.enc[k]||0:0),0);return[label,t0,r,chg,t0+r-chg,Math.max(0,chg-t0-r)];}) ],'BFR');
+  }
+  if(type==='tva'||type==='dashboard'){
+    addSheet([['Mission','Client','Encaissé TTC','HT estimé','TVA 18%'],
+      ...DB.missions.filter(m=>m.tva==='18').map(m=>[m.nom,m.client,m.avance,Math.round(m.avance*100/118),Math.round(m.avance*18/118)])],'TVA');
+  }
+  if(type==='parametres'||type==='dashboard'){
+    addSheet([['Paramètre','Valeur'],
+      ['Solde banque',DB.params.banque],['Solde coffre',DB.params.coffre],
+      ['Masse salariale',DB.params.masse_sal],['Arriéré salaires',DB.params.arr_sal],
+      ['Remboursé',DB.params.arr_sal_r],['Mensualité arriéré',DB.params.arr_sal_m]],'Paramètres');
+  }
+  const date=new Date().toISOString().split('T')[0];
+  const name=type==='dashboard'?`MARABU_Rapport_Complet_${date}`:`MARABU_${type}_${date}`;
+  XLSX.writeFile(wb,`${name}.xlsx`);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════════
+renderDash();
+</script>
+</body>
+</html>

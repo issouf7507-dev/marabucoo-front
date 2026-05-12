@@ -1,0 +1,57 @@
+const BASE = "/api/v1";
+
+type OnUnauthorized = () => void;
+let _onUnauthorized: OnUnauthorized | null = null;
+
+export function setUnauthorizedHandler(fn: OnUnauthorized) {
+  _onUnauthorized = fn;
+}
+
+function getToken(): string | null {
+  return localStorage.getItem("marabu_token");
+}
+
+async function request<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+): Promise<T> {
+  const token = getToken();
+  const headers: HeadersInit = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(`${BASE}${path}`, {
+    method,
+    headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+
+  if (res.status === 401) {
+    _onUnauthorized?.();
+    throw new ApiError(401, "Session expirée, veuillez vous reconnecter");
+  }
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new ApiError(res.status, data?.message ?? `Erreur ${res.status}`);
+  }
+
+  return data as T;
+}
+
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+export const api = {
+  get: <T>(path: string) => request<T>("GET", path),
+  post: <T>(path: string, body: unknown) => request<T>("POST", path, body),
+  put: <T>(path: string, body: unknown) => request<T>("PUT", path, body),
+  delete: <T>(path: string) => request<T>("DELETE", path),
+};
