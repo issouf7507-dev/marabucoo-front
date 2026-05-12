@@ -1,4 +1,4 @@
-const BASE = "/api/v1";
+const BASE = `${import.meta.env.VITE_API_BASE ?? ""}/api/v1`;
 
 type OnUnauthorized = () => void;
 let _onUnauthorized: OnUnauthorized | null = null;
