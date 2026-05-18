@@ -16,6 +16,7 @@ export interface ApiPetiteCaisse {
   sortie:      number;
   penalite:    number;
   solde:       number;
+  refFacture:  string | null;
 }
 
 export const petiteCaisseService = {
@@ -32,6 +33,7 @@ export const petiteCaisseService = {
     entree:      data.entree,
     sortie:      data.sortie,
     penalite:    data.pen,
+    refFacture:  data.refFacture || null,
   }),
   update: (id: number, data: Partial<PetiteCaisseInput>) => api.put<ApiPetiteCaisse>(`/petite-caisse/${id}`, {
     ...(data.caisse      && { caisse:      data.caisse }),
@@ -45,6 +47,7 @@ export const petiteCaisseService = {
     ...(data.entree != null && { entree:     data.entree }),
     ...(data.sortie != null && { sortie:     data.sortie }),
     ...(data.pen   != null && { penalite:   data.pen }),
+    refFacture: data.refFacture || null,
   }),
   remove: (id: number) => api.delete<void>(`/petite-caisse/${id}`),
 };

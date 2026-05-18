@@ -33,8 +33,19 @@ function ReelStatut({ statut }: { statut: string | null | undefined }) {
 
 const chargeInitial: ChargeInput = {
   lib: '', cat: 'EXPLOIT', nature: 'fixe', type: 'prevu',
-  per: 'Mensuelle', budget: 0, obs: '',
+  per: 'Mensuelle', budget: 0, moisApplicables: '', obs: '',
 };
+
+// Returns true if the charge is budgeted for the given month key
+function isApplicable(c: { periodicite: string; moisApplicables: string }, moisKey: string): boolean {
+  if (!c.moisApplicables || c.moisApplicables.trim() === '') return true;
+  return c.moisApplicables.split(',').includes(moisKey);
+}
+
+function budgetMois(c: { budget: number; nature: string; periodicite: string; moisApplicables: string }, moisKey: string): number {
+  if (c.nature === 'variable') return 0; // variable charges never add to monthly budget
+  return isApplicable(c, moisKey) ? (c.budget || 0) : 0;
+}
 
 // ── Page ──────────────────────────────────────────────────────────────
 
@@ -73,19 +84,21 @@ export default function Charges() {
     (!filNature || c.nature    === filNature)
   );
 
-  // KPIs
-  const totalBudget = filtered.reduce((s, c) => s + (c.budget || 0), 0);
+  // KPIs — budget ne compte que pour les mois applicables de chaque charge
+  const totalBudget = filtered.reduce((s, c) => s + budgetMois(c, moisKey), 0);
   const totalReel   = filtered.reduce((s, c) => s + (getReel(c, moisKey, annee)?.montant ?? 0), 0);
   const ecart       = totalReel - totalBudget;
-  const nonSaisies  = filtered.filter(c => !getReel(c, moisKey, annee)?.montant);
+  // Variable charges are never "non saisies" — they have no recurring budget obligation
+  const nonSaisies  = filtered.filter(c => c.nature !== 'variable' && isApplicable(c, moisKey) && !getReel(c, moisKey, annee)?.montant);
 
   // ── Graphique ─────────────────────────────────────────────────────
   useEffect(() => {
     chgChart.current?.destroy();
-    const prevMois = MF.map(() => charges.reduce((s, c) => s + (c.budget || 0), 0));
+    const fixes = charges.filter(c => c.nature !== 'variable');
+    const prevMois = MF.map((_, i) => fixes.reduce((s, c) => s + budgetMois(c, MK[i]), 0));
     const reelMoisData = MF.map((_, i) => {
       const k = MK[i];
-      return charges.reduce((s, c) => s + (getReel(c, k, annee)?.montant ?? 0), 0);
+      return fixes.reduce((s, c) => s + (getReel(c, k, annee)?.montant ?? 0), 0);
     });
     if (chgRef.current) {
       chgChart.current = new Chart(chgRef.current, {
@@ -93,8 +106,8 @@ export default function Charges() {
         data: {
           labels: MF.map(m => m.slice(0, 3)),
           datasets: [
-            { label: 'Budget', data: prevMois,     backgroundColor: 'rgba(181,98,10,.25)',  borderColor: '#B5620A', borderWidth: 1.5 },
-            { label: 'Réalisé', data: reelMoisData, backgroundColor: 'rgba(181,58,42,.5)',   borderColor: '#B53A2A', borderWidth: 1.5 },
+            { label: 'Budget (fixe)', data: prevMois,     backgroundColor: 'rgba(181,98,10,.25)',  borderColor: '#B5620A', borderWidth: 1.5 },
+            { label: 'Réalisé (fixe)', data: reelMoisData, backgroundColor: 'rgba(181,58,42,.5)',   borderColor: '#B53A2A', borderWidth: 1.5 },
           ],
         },
         options: {
@@ -114,7 +127,7 @@ export default function Charges() {
     form.reset({
       lib: c.libelle, cat: c.categorie as ChargeInput['cat'],
       nature: c.nature as ChargeInput['nature'], type: c.type as ChargeInput['type'],
-      per: c.periodicite, budget: c.budget, obs: c.obs ?? '',
+      per: c.periodicite, budget: c.budget, moisApplicables: c.moisApplicables ?? '', obs: c.obs ?? '',
     });
     setPosteModal(true);
   }
@@ -263,36 +276,60 @@ export default function Charges() {
                 <tbody>
                   <QueryRows isLoading={isLoading} error={error} colSpan={9} />
                   {!isLoading && !error && filtered.map(c => {
+                    const isVar    = c.nature === 'variable';
+                    const applicable = isVar || isApplicable(c, moisKey);
                     const reel = getReel(c, moisKey, annee);
                     const r    = reel?.montant ?? 0;
-                    const ec   = r - (c.budget || 0);
+                    const bud  = budgetMois(c, moisKey);
+                    const ec   = r - bud;
                     const paid = !!reel?.montant;
                     return (
-                      <tr key={c.id} style={!paid ? { background: 'var(--Al)' } : ec > 0 && c.budget > 0 ? { background: 'var(--Rl)' } : undefined}>
+                      <tr key={c.id} style={
+                        !applicable ? { opacity: .5 } :
+                        ec > 0 && r > 0 ? { background: 'var(--Rl)' } :    // réalisé dépasse budget (y compris variables à budget 0)
+                        !isVar && !paid ? { background: 'var(--Al)' } :      // fixe non saisi
+                        undefined
+                      }>
                         <td className="fw7">{c.libelle}</td>
                         <td><span className="bdg bn">{CAT_LBL[c.categorie] || c.categorie}</span></td>
                         <td><span className={`bdg ${c.nature === 'fixe' ? 'bb' : 'bp'}`}>{c.nature}</span></td>
-                        <td className="tnum">{fmt(c.budget)}</td>
                         <td className="tnum">
-                          {paid
-                            ? <span style={{ color: ec > 0 ? 'var(--R)' : 'var(--G)', fontWeight: 700, fontFamily: 'var(--fm)' }}>{fmt(r)}</span>
-                            : <span style={{ color: 'var(--tx3)' }}>—</span>
+                          {isVar
+                            ? <span style={{ fontSize: 10, color: 'var(--tx3)', fontStyle: 'italic' }}>Variable</span>
+                            : applicable ? fmt(bud) : <span style={{ color: 'var(--tx3)' }}>—</span>
                           }
                         </td>
-                        <td className={`tnum ${ec > 0 ? 'rc' : ec < 0 ? 'tc' : ''}`}>
-                          {ec !== 0 ? `${ec > 0 ? '+' : ''}${fmt(ec)}` : '—'}
+                        <td className="tnum">
+                          {!applicable
+                            ? <span className="bdg bn" style={{ fontSize: 9 }}>N/A ce mois</span>
+                            : paid
+                              ? <span style={{ color: ec > 0 ? 'var(--R)' : 'var(--G)', fontWeight: 700, fontFamily: 'var(--fm)' }}>{fmt(r)}</span>
+                              : <span style={{ color: 'var(--tx3)' }}>—</span>
+                          }
                         </td>
-                        <td><ReelStatut statut={reel?.statut} /></td>
+                        <td className={`tnum ${ec > 0 && r > 0 ? 'rc' : ec < 0 ? 'tc' : ''}`}>
+                          {applicable && ec !== 0 && r > 0 ? `${ec > 0 ? '+' : ''}${fmt(ec)}` : '—'}
+                        </td>
+                        <td>
+                          {!applicable
+                            ? <span style={{ color: 'var(--tx3)', fontSize: 11 }}>—</span>
+                            : isVar && !paid
+                              ? <span style={{ color: 'var(--tx3)', fontSize: 11 }}>—</span>
+                              : <ReelStatut statut={reel?.statut} />
+                          }
+                        </td>
                         <td style={{ fontSize: 11 }}>{reel?.datePmt?.slice(0, 10) ?? '—'}</td>
                         <td>
-                          <button
-                            className={`btn xs ${paid ? '' : 'prim'}`}
-                            style={{ gap: 5 }}
-                            onClick={() => openPay(c)}
-                          >
-                            <CreditCard size={12} strokeWidth={2} />
-                            {paid ? 'Modifier' : 'Saisir'}
-                          </button>
+                          {applicable && (
+                            <button
+                              className={`btn xs ${!isVar && !paid ? 'prim' : ''}`}
+                              style={{ gap: 5 }}
+                              onClick={() => openPay(c)}
+                            >
+                              <CreditCard size={12} strokeWidth={2} />
+                              {paid ? 'Modifier' : 'Saisir'}
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
@@ -302,7 +339,7 @@ export default function Charges() {
                   <tr style={{ background: 'var(--sur2)', borderTop: '2px solid var(--bor2)' }}>
                     <td colSpan={3} className="fw7" style={{ padding: '7px 10px', fontSize: 12 }}>TOTAL</td>
                     <td className="tnum fw7">{fmt(totalBudget)}</td>
-                    <td className="tnum fw7" style={{ color: totalReel > 0 ? (ecart > 0 ? 'var(--R)' : 'var(--G)') : 'var(--tx3)' }}>{fmt(totalReel)}</td>
+                    <td className="tnum fw7" style={{ color: totalReel > 0 ? (ecart > 0 ? 'var(--R)' : 'var(--G)') : 'var(--tx3)' }}>{totalReel > 0 ? fmt(totalReel) : '—'}</td>
                     <td className={`tnum fw7 ${ecart > 0 ? 'rc' : ecart < 0 ? 'tc' : ''}`}>
                       {ecart !== 0 ? `${ecart > 0 ? '+' : ''}${fmt(ecart)}` : '—'}
                     </td>
@@ -316,7 +353,7 @@ export default function Charges() {
           {/* Graphique */}
           <div className="card">
             <div className="ch fb">
-              <h3>Budget vs Réalisé — {annee}</h3>
+              <h3>Budget vs Réalisé (charges fixes) — {annee}</h3>
               <YearSelect value={annee} onChange={setAnnee} />
             </div>
             <div className="cb">
@@ -369,8 +406,9 @@ export default function Charges() {
                           {MK.map((k, i) => {
                             const reel  = getReel(c, k, annee);
                             const val   = reel?.montant ?? 0;
+                            const appli = c.nature !== 'variable' && isApplicable(c, k);
                             const past  = i < new Date().getMonth() && annee === THIS_YEAR;
-                            const late  = past && !val && c.budget > 0;
+                            const late  = past && !val && c.budget > 0 && appli;
                             const over  = val > c.budget && c.budget > 0;
                             return (
                               <td key={k} style={{ padding: '4px 3px', textAlign: 'right' }}>
@@ -387,7 +425,7 @@ export default function Charges() {
                                   )
                                   : late
                                     ? <span style={{ fontSize: 10, color: 'var(--R)', fontWeight: 700 }}>!</span>
-                                    : <span style={{ color: 'var(--bor2)', fontSize: 11 }}>—</span>
+                                    : <span style={{ color: appli ? 'var(--bor2)' : 'var(--bor)', fontSize: 11 }}>—</span>
                                 }
                               </td>
                             );
@@ -401,14 +439,15 @@ export default function Charges() {
                   </tbody>
                   <tfoot>
                     <tr style={{ background: 'var(--sur2)', borderTop: '2px solid var(--bor2)' }}>
-                      <td className="fw7" style={{ padding: '7px 10px', fontSize: 12 }}>TOTAL</td>
-                      <td className="tnum fw7" style={{ color: 'var(--A)' }}>{fmt(charges.reduce((s, c) => s + c.budget, 0))}</td>
+                      <td className="fw7" style={{ padding: '7px 10px', fontSize: 12 }}>TOTAL BUDGET</td>
+                      <td className="tnum fw7" style={{ color: 'var(--A)', fontSize: 11 }}>/ occurrence</td>
                       {MK.map(k => {
-                        const tot = charges.reduce((s, c) => s + (getReel(c, k, annee)?.montant ?? 0), 0);
-                        const bud = charges.reduce((s, c) => s + c.budget, 0);
+                        const budM = charges.reduce((s, c) => s + budgetMois(c, k), 0);
+                        const tot  = charges.reduce((s, c) => s + (getReel(c, k, annee)?.montant ?? 0), 0);
                         return (
-                          <td key={k} className="tnum fw7" style={{ fontSize: 11, padding: '7px 3px', color: tot > bud ? 'var(--R)' : tot > 0 ? 'var(--G)' : 'var(--tx3)' }}>
-                            {tot > 0 ? fmt(tot) : '—'}
+                          <td key={k} className="tnum" style={{ fontSize: 10, padding: '4px 3px', textAlign: 'right' }}>
+                            <div style={{ color: 'var(--A)', fontWeight: 600 }}>{fmt(budM)}</div>
+                            {tot > 0 && <div style={{ color: tot > budM ? 'var(--R)' : 'var(--G)', fontWeight: 700, fontSize: 10.5 }}>{fmt(tot)}</div>}
                           </td>
                         );
                       })}
@@ -440,7 +479,7 @@ export default function Charges() {
               <thead>
                 <tr>
                   <th>Libellé</th><th>Catégorie</th><th>Nature</th><th>Type</th>
-                  <th>Périodicité</th><th className="tr">Budget mensuel</th><th>Observations</th><th></th>
+                  <th>Périodicité</th><th>Mois applicables</th><th className="tr">Budget / occurrence</th><th>Observations</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -455,6 +494,17 @@ export default function Charges() {
                         <td><span className={`bdg ${c.nature === 'fixe' ? 'bb' : 'bp'}`}>{c.nature}</span></td>
                         <td><span className={`bdg ${c.type === 'imprevu' ? 'br' : 'bn'}`}>{c.type}</span></td>
                         <td style={{ fontSize: 11 }}>{c.periodicite}</td>
+                        <td style={{ fontSize: 10 }}>
+                          {c.moisApplicables
+                            ? c.moisApplicables.split(',').map(k => {
+                                const i = MK.indexOf(k as typeof MK[number]);
+                                return i >= 0 ? (
+                                  <span key={k} className="bdg bg" style={{ marginRight: 2, fontSize: 9 }}>{MF[i].slice(0, 3)}</span>
+                                ) : null;
+                              })
+                            : <span style={{ color: 'var(--tx3)' }}>Tous les mois</span>
+                          }
+                        </td>
                         <td className="tnum fw7">{fmt(c.budget)}</td>
                         <td style={{ fontSize: 11, color: 'var(--tx3)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {c.obs ?? '—'}
@@ -545,14 +595,55 @@ export default function Charges() {
             <option value="imprevu">Imprévu</option>
           </Field>
           <Field as="select" label="Périodicité" value={form.values.per} error={form.errors.per}
-            onChange={e => form.set('per', e.target.value)}>
+            onChange={e => {
+              form.set('per', e.target.value);
+              if (e.target.value === 'Mensuelle') form.set('moisApplicables', '');
+            }}>
             <option value="Mensuelle">Mensuelle</option>
             <option value="Trimestrielle">Trimestrielle</option>
             <option value="Semestrielle">Semestrielle</option>
             <option value="Annuelle">Annuelle</option>
             <option value="Ponctuelle">Ponctuelle</option>
           </Field>
-          <Field label="Budget mensuel (FCFA)" type="number" value={form.values.budget} error={form.errors.budget}
+          {form.values.per !== 'Mensuelle' && (
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label className="lbl" style={{ marginBottom: 6, display: 'block' }}>
+                Mois d'application * <span style={{ fontSize: 10, color: 'var(--tx3)', fontWeight: 400 }}>(cochez les mois où cette charge est due)</span>
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {MK.map((k, i) => {
+                  const checked = (form.values.moisApplicables ?? '').split(',').filter(Boolean).includes(k);
+                  return (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => {
+                        const current = (form.values.moisApplicables ?? '').split(',').filter(Boolean);
+                        const next = checked ? current.filter(m => m !== k) : [...current, k];
+                        form.set('moisApplicables', next.join(','));
+                      }}
+                      style={{
+                        padding: '4px 10px', borderRadius: 4, fontSize: 11,
+                        fontFamily: 'var(--fm)', fontWeight: 700, cursor: 'pointer',
+                        border: '1px solid',
+                        borderColor: checked ? 'var(--G)' : 'var(--bor)',
+                        background: checked ? 'var(--Gl)' : 'var(--sur2)',
+                        color: checked ? 'var(--G)' : 'var(--tx3)',
+                      }}
+                    >
+                      {MF[i].slice(0, 3)}
+                    </button>
+                  );
+                })}
+              </div>
+              {(form.values.moisApplicables ?? '').split(',').filter(Boolean).length === 0 && (
+                <div style={{ fontSize: 10, color: 'var(--A)', fontFamily: 'var(--fm)', marginTop: 4 }}>
+                  Aucun mois sélectionné — la charge s'appliquera chaque mois
+                </div>
+              )}
+            </div>
+          )}
+          <Field label="Montant par occurrence (FCFA)" type="number" value={form.values.budget} error={form.errors.budget}
             onChange={e => form.set('budget', +e.target.value)} />
           <Field full label="Observations" value={form.values.obs}
             onChange={e => form.set('obs', e.target.value)} />
