@@ -7,10 +7,16 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        // target: 'http://localhost:3000',
+        // target: "http://localhost:4000",
         target: "https://api.marabucoo.marabu.services",
         changeOrigin: true,
       },
     },
+  },
+  optimizeDeps: {
+    include: ["@react-pdf/renderer"],
+  },
+  define: {
+    "process.env": {},
   },
 });

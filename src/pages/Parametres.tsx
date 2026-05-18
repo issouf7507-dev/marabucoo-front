@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Plus, ShieldCheck, Eye, Briefcase, Lock, Unlock, Trash2, KeyRound } from 'lucide-react';
+import { Save, Plus, ShieldCheck, Eye, Briefcase, Lock, Unlock, Trash2, KeyRound, RefreshCw } from 'lucide-react';
 import { fmt } from '../utils/format';
 import { useParams, useUpdateParams } from '../hooks/queries/useParams';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '../hooks/queries/useUsers';
@@ -13,27 +13,25 @@ import Field from '../components/ui/Field';
 //  Types
 // ─────────────────────────────────────────────────────
 
+// Only manually-configurable fields (computed fields are read-only)
 interface FormVals {
-  banque: number; coffre: number;
-  masse_sal: number; charges_pat: number; primes_mens: number;
-  arr_sal: number; arr_sal_r: number; arr_sal_m: number;
-  arr_prim: number; arr_prim_m: number;
+  charges_pat: number; primes_mens: number;
+  arr_sal_m: number; arr_prim: number; arr_prim_m: number;
 }
 
 const DEFAULTS: FormVals = {
-  banque: 0, coffre: 0, masse_sal: 0, charges_pat: 0, primes_mens: 0,
-  arr_sal: 0, arr_sal_r: 0, arr_sal_m: 0, arr_prim: 0, arr_prim_m: 0,
+  charges_pat: 0, primes_mens: 0, arr_sal_m: 0, arr_prim: 0, arr_prim_m: 0,
 };
 
 const PARAM_REF = [
-  { lib: 'Masse salariale brute mensuelle',  key: 'masse_sal'   as const, per: 'Mensuelle', obs: 'Budget paie complet' },
-  { lib: 'Charges patronales',               key: 'charges_pat' as const, per: 'Mensuelle', obs: '% du brut' },
-  { lib: 'Primes mensuelles régulières',     key: 'primes_mens' as const, per: 'Mensuelle', obs: '' },
-  { lib: 'Arriéré salaires (total dû)',      key: 'arr_sal'     as const, per: 'Cumul',     obs: 'À apurer progressivement' },
-  { lib: 'Arriéré salaires remboursé',       key: 'arr_sal_r'   as const, per: 'Cumul',     obs: '' },
-  { lib: 'Mensualité remboursement arriéré', key: 'arr_sal_m'   as const, per: 'Mensuelle', obs: '' },
-  { lib: 'Arriéré primes (total dû)',        key: 'arr_prim'    as const, per: 'Cumul',     obs: '' },
-  { lib: 'Mensualité remboursement primes',  key: 'arr_prim_m'  as const, per: 'Mensuelle', obs: '' },
+  { lib: 'Masse salariale brute mensuelle',  key: 'masseSal'    as const, per: 'Mensuelle', obs: 'Calculé sur actifs', auto: true },
+  { lib: 'Charges patronales',               key: 'chargesPat'  as const, per: 'Mensuelle', obs: '% du brut', auto: false },
+  { lib: 'Primes mensuelles régulières',     key: 'primesMens'  as const, per: 'Mensuelle', obs: '', auto: false },
+  { lib: 'Arriéré salaires (total dû)',      key: 'arrSal'      as const, per: 'Cumul',     obs: 'Auto selon dates embauche', auto: true },
+  { lib: 'Arriéré salaires remboursé',       key: 'arrSalR'     as const, per: 'Cumul',     obs: 'Mis à jour via "Payé"', auto: true },
+  { lib: 'Mensualité remboursement arriéré', key: 'arrSalM'     as const, per: 'Mensuelle', obs: '', auto: false },
+  { lib: 'Arriéré primes (total dû)',        key: 'arrPrim'     as const, per: 'Cumul',     obs: '', auto: false },
+  { lib: 'Mensualité remboursement primes',  key: 'arrPrimM'    as const, per: 'Mensuelle', obs: '', auto: false },
 ];
 
 const ROLE_LABEL: Record<string, string> = { ADMIN: 'Admin', COO: 'COO', VIEWER: 'Lecteur' };
@@ -42,6 +40,32 @@ const ROLE_CLS:   Record<string, string> = { ADMIN: 'br',    COO: 'bb',  VIEWER:
 // ─────────────────────────────────────────────────────
 //  Onglet Général
 // ─────────────────────────────────────────────────────
+
+function AutoBadge() {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 3,
+      fontSize: 9, fontFamily: 'var(--fm)', fontWeight: 700,
+      textTransform: 'uppercase', letterSpacing: '.08em',
+      padding: '1px 5px', borderRadius: 3,
+      background: 'rgba(0,196,98,.12)', color: 'var(--G)',
+    }}>
+      <RefreshCw size={8} strokeWidth={2.5} />Auto
+    </span>
+  );
+}
+
+function AutoValue({ label, value }: { label: string; value: number }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--bor)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <label className="lbl" style={{ margin: 0 }}>{label}</label>
+        <AutoBadge />
+      </div>
+      <span className="tnum fw7" style={{ fontSize: 13, color: 'var(--G)' }}>{fmt(value)} FCFA</span>
+    </div>
+  );
+}
 
 function TabGeneral() {
   const { data: params, isLoading, error } = useParams();
@@ -55,10 +79,8 @@ function TabGeneral() {
   useEffect(() => {
     if (!synced && params) {
       setForm({
-        banque: params.banque, coffre: params.coffre,
-        masse_sal: params.masseSal, charges_pat: params.chargesPat, primes_mens: params.primesMens,
-        arr_sal: params.arrSal, arr_sal_r: params.arrSalR, arr_sal_m: params.arrSalM,
-        arr_prim: params.arrPrim, arr_prim_m: params.arrPrimM,
+        charges_pat: params.chargesPat, primes_mens: params.primesMens,
+        arr_sal_m: params.arrSalM, arr_prim: params.arrPrim, arr_prim_m: params.arrPrimM,
       });
       setSynced(true);
     }
@@ -70,11 +92,11 @@ function TabGeneral() {
   };
 
   const isDirty = params && synced && (
-    form.banque !== params.banque || form.coffre !== params.coffre ||
-    form.masse_sal !== params.masseSal || form.charges_pat !== params.chargesPat ||
-    form.primes_mens !== params.primesMens || form.arr_sal !== params.arrSal ||
-    form.arr_sal_r !== params.arrSalR || form.arr_sal_m !== params.arrSalM ||
-    form.arr_prim !== params.arrPrim || form.arr_prim_m !== params.arrPrimM
+    form.charges_pat !== params.chargesPat ||
+    form.primes_mens !== params.primesMens ||
+    form.arr_sal_m   !== params.arrSalM    ||
+    form.arr_prim    !== params.arrPrim    ||
+    form.arr_prim_m  !== params.arrPrimM
   );
 
   async function save() {
@@ -86,9 +108,11 @@ function TabGeneral() {
     } catch (e) { setSaveErr(e instanceof Error ? e.message : 'Erreur'); }
   }
 
-  const arrSolde     = form.arr_sal - form.arr_sal_r;
+  const arrSolde     = (params?.arrSal ?? 0) - (params?.arrSalR ?? 0);
   const moisRestants = form.arr_sal_m > 0 ? Math.ceil(arrSolde / form.arr_sal_m) : 0;
-  const pctApure     = form.arr_sal > 0 ? Math.round(form.arr_sal_r / form.arr_sal * 100) : 0;
+  const pctApure     = (params?.arrSal ?? 0) > 0
+    ? Math.round((params?.arrSalR ?? 0) / (params?.arrSal ?? 1) * 100)
+    : 0;
 
   if (isLoading) return <QueryCard isLoading error={null} />;
   if (error)     return <QueryCard isLoading={false} error={error} />;
@@ -108,42 +132,49 @@ function TabGeneral() {
       {saveErr && <div className="alert r" style={{ marginBottom: 14 }}>{saveErr}</div>}
 
       <div className="g2" style={{ marginBottom: 14 }}>
+        {/* Valeurs calculées automatiquement */}
         <div className="card">
-          <div className="ch"><h3>Trésorerie & Ressources humaines</h3></div>
+          <div className="ch">
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              Données calculées automatiquement
+              <AutoBadge />
+            </h3>
+          </div>
           <div className="cb">
-            <div className="fg" style={{ gridTemplateColumns: '1fr' }}>
-              {[
-                { lbl: 'Solde compte bancaire (FCFA)',      key: 'banque'      as const },
-                { lbl: 'Solde coffre-fort (FCFA)',          key: 'coffre'      as const },
-                { lbl: 'Masse salariale brute mensuelle',   key: 'masse_sal'   as const },
-                { lbl: 'Charges patronales (FCFA)',         key: 'charges_pat' as const },
-                { lbl: 'Primes mensuelles régulières',      key: 'primes_mens' as const },
-              ].map(({ lbl, key }) => (
-                <div className="fr" key={key}>
-                  <label className="lbl">{lbl}</label>
-                  <input className="inp" type="number" value={form[key]} onChange={e => set(key, +e.target.value)} />
-                </div>
-              ))}
+            <div style={{ fontSize: 11, color: 'var(--tx3)', fontFamily: 'var(--fm)', marginBottom: 10 }}>
+              Ces valeurs se mettent à jour en temps réel depuis les modules Banque, Coffre-fort et Salaires.
+            </div>
+            <AutoValue label="Solde compte bancaire"           value={params?.banque    ?? 0} />
+            <AutoValue label="Solde coffre-fort"               value={params?.coffre    ?? 0} />
+            <AutoValue label="Masse salariale brute mensuelle" value={params?.masseSal  ?? 0} />
+            <AutoValue label="Arriéré salaires — total dû"     value={params?.arrSal    ?? 0} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <label className="lbl" style={{ margin: 0 }}>Arriéré salaires remboursé</label>
+                <AutoBadge />
+              </div>
+              <span className="tnum fw7" style={{ fontSize: 13, color: 'var(--tx2)' }}>
+                {fmt(params?.arrSalR ?? 0)} FCFA
+              </span>
             </div>
           </div>
         </div>
+
+        {/* Paramètres manuels */}
         <div className="card">
-          <div className="ch"><h3>Arriérés salaires & primes</h3></div>
+          <div className="ch"><h3>Paramètres à configurer</h3></div>
           <div className="cb">
             <div className="fg" style={{ gridTemplateColumns: '1fr' }}>
               {[
-                { lbl: 'Arriéré salaires — cumul total dû', key: 'arr_sal'   as const },
-                { lbl: 'Remboursé à ce jour',               key: 'arr_sal_r' as const },
-                { lbl: 'Mensualité de remboursement',        key: 'arr_sal_m' as const },
-                { lbl: 'Arriéré primes — cumul total dû',   key: 'arr_prim'  as const },
-                { lbl: 'Mensualité remboursement primes',   key: 'arr_prim_m' as const },
+                { lbl: 'Charges patronales (FCFA)',          key: 'charges_pat' as const },
+                { lbl: 'Primes mensuelles régulières',       key: 'primes_mens' as const },
+                { lbl: 'Mensualité remboursement arriéré',   key: 'arr_sal_m'   as const },
+                { lbl: 'Arriéré primes — cumul total dû',    key: 'arr_prim'    as const },
+                { lbl: 'Mensualité remboursement primes',    key: 'arr_prim_m'  as const },
               ].map(({ lbl, key }) => (
                 <div className="fr" key={key}>
                   <label className="lbl">{lbl}</label>
                   <input className="inp" type="number" value={form[key]} onChange={e => set(key, +e.target.value)} />
-                  {key === 'arr_sal_r' && form.arr_sal_r > form.arr_sal && (
-                    <span style={{ fontSize: 10, color: 'var(--R)', fontFamily: 'var(--fm)' }}>Dépasse le total dû</span>
-                  )}
                 </div>
               ))}
             </div>
@@ -159,8 +190,11 @@ function TabGeneral() {
             <tbody>
               {PARAM_REF.map(p => (
                 <tr key={p.key}>
-                  <td style={{ fontSize: 12 }}>{p.lib}</td>
-                  <td className="tnum fw7">{fmt(form[p.key])}</td>
+                  <td style={{ fontSize: 12 }}>
+                    {p.lib}
+                    {p.auto && <span style={{ marginLeft: 6 }}><AutoBadge /></span>}
+                  </td>
+                  <td className="tnum fw7">{fmt(params?.[p.key] ?? 0)}</td>
                   <td><span className="bdg bn">{p.per}</span></td>
                   <td style={{ fontSize: 11, color: 'var(--tx3)' }}>{p.obs}</td>
                 </tr>
@@ -178,8 +212,8 @@ function TabGeneral() {
             <tbody>
               <tr>
                 <td className="fw7">Arriéré salaires</td>
-                <td className="tnum">{fmt(form.arr_sal)}</td>
-                <td className="tnum tc">{fmt(form.arr_sal_r)}</td>
+                <td className="tnum">{fmt(params?.arrSal ?? 0)}</td>
+                <td className="tnum tc">{fmt(params?.arrSalR ?? 0)}</td>
                 <td className={`tnum fw7 ${arrSolde > 0 ? 'rc' : 'tc'}`}>{fmt(arrSolde)}</td>
                 <td className="tnum">{fmt(form.arr_sal_m)}</td>
                 <td className="tnum">{moisRestants > 0 ? moisRestants : '—'}</td>
@@ -192,7 +226,7 @@ function TabGeneral() {
                   </div>
                 </td>
               </tr>
-              {form.arr_prim > 0 && (
+              {(form.arr_prim > 0) && (
                 <tr>
                   <td className="fw7">Arriéré primes</td>
                   <td className="tnum">{fmt(form.arr_prim)}</td>

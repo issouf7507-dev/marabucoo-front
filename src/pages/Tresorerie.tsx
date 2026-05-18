@@ -33,7 +33,6 @@ export default function Tresorerie() {
   const [fCoffre, setFCoffre] = useState(0);
   const [fEntrees, setFEntrees] = useState(0);
   const [fPrev, setFPrev] = useState(0);
-  const [fPay, setFPay] = useState(0);
   const [fReste, setFReste] = useState(0);
 
   const { data: rows = [], isLoading, error } = useTresorerie(annee);
@@ -107,7 +106,6 @@ export default function Tresorerie() {
     setFCoffre(r.coffre);
     setFEntrees(r.entrees);
     setFPrev(r.chgPrev);
-    setFPay(r.chgPay);
     setFReste(r.reste);
     setEditTarget(r);
   }
@@ -119,7 +117,7 @@ export default function Tresorerie() {
       await upsertMutation.mutateAsync({
         mois: editTarget.mois,
         annee,
-        data: { type: fType, banque: fBanque, coffre: fCoffre, entrees: fEntrees, chgPrev: fPrev, chgPay: fPay, reste: fReste },
+        data: { type: fType, banque: fBanque, coffre: fCoffre, entrees: fEntrees, chgPrev: fPrev, reste: fReste },
       });
       setEditTarget(null);
     } catch (e) {
@@ -253,8 +251,9 @@ export default function Tresorerie() {
               onChange={e => setFEntrees(+e.target.value)} />
             <Field label="Charges prévues (FCFA)" type="number" value={fPrev}
               onChange={e => setFPrev(+e.target.value)} />
-            <Field label="Charges payées (FCFA)" type="number" value={fPay}
-              onChange={e => setFPay(+e.target.value)} />
+            <div style={{ fontSize: 11, color: 'var(--tx3)', padding: '4px 0', gridColumn: '1/-1' }}>
+              ℹ️ Les charges payées sont calculées automatiquement depuis les salaires et charges réalisées.
+            </div>
             <Field label="Reste à payer (FCFA)" type="number" value={fReste}
               onChange={e => setFReste(+e.target.value)} />
             <Field label="Solde banque (FCFA)" type="number" value={fBanque}

@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, CreditCard, CheckCircle2, Clock, Printer, X } from 'lucide-react';
+import { Plus, Trash2, CreditCard, CheckCircle2, Clock, Printer, Loader2 } from 'lucide-react';
 import { fmt } from '../utils/format';
 import { useMissions } from '../hooks/queries/useMissions';
 import { useFactures, useCreateFacture, useDeleteFacture, useUpdateTranche } from '../hooks/queries/useFactures';
 import Modal from '../components/ui/Modal';
 import Field from '../components/ui/Field';
 import { QueryCard } from '../components/ui/QueryState';
+import { openFacturePdf } from '../components/pdf/FacturePdf';
 import type { ApiTranche } from '../services/factures.service';
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -34,158 +35,7 @@ function statutBadge(t: ApiTranche) {
   </span>;
 }
 
-// ── Impression facture ────────────────────────────────────────────────
-
 import type { ApiFacture } from '../services/factures.service';
-
-function FacturePrint({ facture: f, onClose }: { facture: ApiFacture; onClose: () => void }) {
-  const tvaMontant = f.tvaMontant ?? 0;
-  const totalEnc   = f.tranches.reduce((s, t) => s + t.encaisse, 0);
-  const solde      = f.ttc - totalEnc;
-
-  return (
-    <div className="fac-print-overlay">
-      {/* Barre d'actions (masquée à l'impression) */}
-      <div className="fac-print-bar">
-        <button className="btn prim" onClick={() => window.print()}>
-          <Printer size={14} strokeWidth={2} />Imprimer / Enregistrer en PDF
-        </button>
-        <button className="btn" onClick={onClose}>
-          <X size={14} strokeWidth={2} />Fermer
-        </button>
-      </div>
-
-      {/* Document A4 */}
-      <div className="fac-print-doc">
-        {/* ── En-tête ── */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 48, borderBottom: '2px solid #18181b', paddingBottom: 24 }}>
-          <div>
-            <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-.02em', color: '#18181b' }}>MARABU SERVICES</div>
-            <div style={{ fontSize: 11, color: '#52525b', marginTop: 4 }}>Cabinet de conseil en management</div>
-            <div style={{ fontSize: 11, color: '#52525b' }}>Abidjan, Côte d'Ivoire</div>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: '#18181b', letterSpacing: '-.03em' }}>FACTURE</div>
-            <div style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 700, color: '#7c3aed', marginTop: 4 }}>{f.num}</div>
-            <div style={{ fontSize: 11, color: '#52525b', marginTop: 2 }}>Date : {f.date.slice(0, 10)}</div>
-          </div>
-        </div>
-
-        {/* ── Client ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32, marginBottom: 36 }}>
-          <div>
-            <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#a1a1aa', marginBottom: 6 }}>Émetteur</div>
-            <div style={{ fontWeight: 600 }}>Marabu Services</div>
-            <div style={{ fontSize: 12, color: '#52525b' }}>Cabinet de conseil en management</div>
-            <div style={{ fontSize: 12, color: '#52525b' }}>Abidjan, Côte d'Ivoire</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#a1a1aa', marginBottom: 6 }}>Facturé à</div>
-            <div style={{ fontWeight: 600, fontSize: 14 }}>{f.mission.client}</div>
-            <div style={{ fontSize: 12, color: '#52525b', marginTop: 2 }}>Mission : {f.mission.nom}</div>
-          </div>
-        </div>
-
-        {/* ── Tableau prestations ── */}
-        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 24 }}>
-          <thead>
-            <tr style={{ background: '#18181b', color: '#fff' }}>
-              <th style={{ padding: '9px 12px', textAlign: 'left', fontSize: 10.5, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase' }}>Désignation</th>
-              <th style={{ padding: '9px 12px', textAlign: 'right', fontSize: 10.5, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', width: 90 }}>Qté</th>
-              <th style={{ padding: '9px 12px', textAlign: 'right', fontSize: 10.5, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', width: 130 }}>Prix unitaire HT</th>
-              <th style={{ padding: '9px 12px', textAlign: 'right', fontSize: 10.5, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', width: 130 }}>Montant HT</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style={{ borderBottom: '1px solid #e4e4e8' }}>
-              <td style={{ padding: '12px 12px', fontSize: 12 }}>
-                <div style={{ fontWeight: 600 }}>Prestation de conseil — {f.mission.nom}</div>
-                <div style={{ fontSize: 11, color: '#71717a', marginTop: 2 }}>Mission : {f.mission.nom} · Client : {f.mission.client}</div>
-              </td>
-              <td style={{ padding: '12px 12px', textAlign: 'right', fontSize: 12 }}>1</td>
-              <td style={{ padding: '12px 12px', textAlign: 'right', fontSize: 12, fontFamily: 'monospace' }}>{f.ht.toLocaleString('fr-FR')} FCFA</td>
-              <td style={{ padding: '12px 12px', textAlign: 'right', fontSize: 12, fontFamily: 'monospace', fontWeight: 600 }}>{f.ht.toLocaleString('fr-FR')} FCFA</td>
-            </tr>
-          </tbody>
-        </table>
-
-        {/* ── Totaux ── */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 36 }}>
-          <div style={{ width: 280 }}>
-            {[
-              { lbl: 'Sous-total HT', val: f.ht, color: '#18181b' },
-              ...(f.tvaType === '18' ? [{ lbl: 'TVA 18%', val: tvaMontant, color: '#52525b' }] : [{ lbl: 'TVA', val: null, color: '#52525b' }]),
-            ].map(({ lbl, val, color }) => (
-              <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #e4e4e8', fontSize: 12, color }}>
-                <span>{lbl}</span>
-                <span style={{ fontFamily: 'monospace' }}>
-                  {val !== null ? `${val.toLocaleString('fr-FR')} FCFA` : <span style={{ fontSize: 10, background: '#f4f4f5', padding: '1px 6px', borderRadius: 4 }}>Exonérée</span>}
-                </span>
-              </div>
-            ))}
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 5px', fontSize: 15, fontWeight: 700, color: '#18181b' }}>
-              <span>TOTAL TTC</span>
-              <span style={{ fontFamily: 'monospace' }}>{f.ttc.toLocaleString('fr-FR')} FCFA</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 11, color: totalEnc > 0 ? '#009950' : '#a1a1aa' }}>
-              <span>Encaissé</span>
-              <span style={{ fontFamily: 'monospace' }}>{totalEnc.toLocaleString('fr-FR')} FCFA</span>
-            </div>
-            {solde > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 11, fontWeight: 600, color: '#dc2626' }}>
-                <span>Solde restant</span>
-                <span style={{ fontFamily: 'monospace' }}>{solde.toLocaleString('fr-FR')} FCFA</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ── Échéancier ── */}
-        {f.tranches.length > 0 && (
-          <div style={{ marginBottom: 36 }}>
-            <div style={{ fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#a1a1aa', marginBottom: 10 }}>Échéancier de paiement</div>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: '#f4f4f5' }}>
-                  {['Tranche', 'Montant (FCFA)', 'Échéance', 'Statut'].map(h => (
-                    <th key={h} style={{ padding: '7px 10px', textAlign: h === 'Tranche' ? 'left' : 'right', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', color: '#71717a', borderBottom: '1px solid #e4e4e8' }}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {f.tranches.map(t => (
-                  <tr key={t.id} style={{ borderBottom: '1px solid #f4f4f5' }}>
-                    <td style={{ padding: '7px 10px', fontSize: 12 }}>Tranche {t.num}</td>
-                    <td style={{ padding: '7px 10px', textAlign: 'right', fontSize: 12, fontFamily: 'monospace', fontWeight: 600 }}>{t.montant.toLocaleString('fr-FR')}</td>
-                    <td style={{ padding: '7px 10px', textAlign: 'right', fontSize: 12 }}>{t.echeance.slice(0, 10)}</td>
-                    <td style={{ padding: '7px 10px', textAlign: 'right', fontSize: 11 }}>
-                      <span style={{
-                        padding: '2px 8px', borderRadius: 4, fontWeight: 600,
-                        background: t.encaisse >= t.montant ? '#dcfce7' : '#fef3c7',
-                        color: t.encaisse >= t.montant ? '#166534' : '#92400e',
-                      }}>
-                        {t.encaisse >= t.montant ? 'Soldé' : t.encaisse > 0 ? 'Partiel' : 'En attente'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* ── Mentions légales ── */}
-        <div style={{ borderTop: '1px solid #e4e4e8', paddingTop: 20, fontSize: 11, color: '#71717a' }}>
-          <div style={{ marginBottom: 6 }}>Paiement par virement bancaire à l'ordre de Marabu Services.</div>
-          <div>En cas de retard de paiement, des pénalités de retard pourront être appliquées conformément à la législation en vigueur en Côte d'Ivoire.</div>
-          <div style={{ marginTop: 16, textAlign: 'center', fontStyle: 'italic' }}>Merci de votre confiance.</div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── Types locaux ─────────────────────────────────────────────────────
 
@@ -202,11 +52,17 @@ export default function Facturation() {
   const deleteMutation    = useDeleteFacture();
   const trancheMutation   = useUpdateTranche();
 
-  const [tab, setTab]         = useState<'factures' | 'echeancier'>('factures');
-  const [modal, setModal]     = useState(false);
-  const [tModal, setTModal]   = useState<{ factureId: number; tranche: ApiTranche } | null>(null);
-  const [printFac, setPrintFac] = useState<ApiFacture | null>(null);
-  const [filMis, setFilMis]   = useState('');
+  const [tab, setTab]           = useState<'factures' | 'echeancier'>('factures');
+  const [modal, setModal]       = useState(false);
+  const [tModal, setTModal]     = useState<{ factureId: number; tranche: ApiTranche } | null>(null);
+  const [pdfLoading, setPdfLoading] = useState<number | null>(null);
+  const [filMis, setFilMis]     = useState('');
+
+  async function printFacture(f: ApiFacture) {
+    setPdfLoading(f.id);
+    try { await openFacturePdf(f); }
+    finally { setPdfLoading(null); }
+  }
 
   // ── Formulaire nouvelle facture ──
   const [missionId, setMissionId]   = useState(0);
@@ -255,6 +111,31 @@ export default function Facturation() {
     setTranches(Array.from({ length: n }, (_, i) => tranches[i] ?? emptyTranche()));
   }
 
+  // Must be declared before any function that uses it
+  const missionOptions = missions.filter(m =>
+    ['CONTRAT', 'EN_COURS', 'TERMINE'].includes(m.statut.toUpperCase())
+  );
+
+  // Info on selected mission's billing status
+  const selectedMission = missionId ? missionOptions.find(m => m.id === missionId) : null;
+  const alreadyBilledHT = missionId
+    ? factures.filter(f => f.missionId === missionId).reduce((s, f) => s + f.ht, 0)
+    : 0;
+  const remainingHT = selectedMission ? Math.max(0, selectedMission.montant - alreadyBilledHT) : 0;
+  const isOverBilling = selectedMission != null && ht > remainingHT && remainingHT > 0;
+
+  // When a mission is selected: auto-fill remaining amount to bill and TVA
+  function onSelectMission(id: number) {
+    setMissionId(id);
+    setErrors(v => ({ ...v, mission: '' }));
+    if (!id) { setHt(0); return; }
+    const mission = missionOptions.find(m => m.id === id);
+    if (!mission) return;
+    const billed = factures.filter(f => f.missionId === id).reduce((s, f) => s + f.ht, 0);
+    setHt(Math.max(0, mission.montant - billed));
+    setTvaType((mission.tva ?? 'exo') as 'exo' | '18');
+  }
+
   function openNew() {
     setMissionId(0); setNum(nextNum(factures.map(f => f.num)));
     setDate(new Date().toISOString().slice(0, 10)); setHt(0);
@@ -274,6 +155,8 @@ export default function Facturation() {
     if (!num.trim())            e.num = 'Numéro requis';
     if (!date)                  e.date = 'Date requise';
     if (ht <= 0)                e.ht = 'Montant requis';
+    if (selectedMission && ht > selectedMission.montant)
+      e.ht = `Dépasse le montant contractuel (${fmt(selectedMission.montant)} FCFA)`;
     const total = tranches.reduce((s, t) => s + t.montant, 0);
     if (Math.abs(total - ttc) > 1) e.tranches = `Total tranches (${fmt(total)}) ≠ TTC (${fmt(ttc)})`;
     tranches.forEach((t, i) => { if (!t.echeance) e[`ech_${i}`] = 'Échéance requise'; });
@@ -295,10 +178,6 @@ export default function Facturation() {
     });
     setTModal(null);
   }
-
-  const missionOptions = missions.filter(m =>
-    ['CONTRAT', 'EN_COURS', 'TERMINE'].includes(m.statut.toUpperCase())
-  );
 
   return (
     <div className="pg">
@@ -407,8 +286,16 @@ export default function Facturation() {
                               }
                             </td>
                             <td style={{ whiteSpace: 'nowrap' }}>
-                              <button className="ibt" title="Imprimer" onClick={() => setPrintFac(f)}>
-                                <Printer size={13} strokeWidth={2} />
+                              <button
+                                className="ibt"
+                                title="Générer PDF"
+                                disabled={pdfLoading === f.id}
+                                onClick={() => printFacture(f)}
+                              >
+                                {pdfLoading === f.id
+                                  ? <Loader2 size={13} strokeWidth={2} style={{ animation: 'spin 1s linear infinite' }} />
+                                  : <Printer size={13} strokeWidth={2} />
+                                }
                               </button>
                               <button className="ibt del" title="Supprimer"
                                 onClick={() => { if (confirm(`Supprimer la facture ${f.num} ?`)) deleteMutation.mutate(f.id); }}>
@@ -489,18 +376,48 @@ export default function Facturation() {
           <div className="fr full">
             <label className="lbl">Mission *</label>
             <select className={`sel${errors.mission ? ' inp-err' : ''}`}
-              value={missionId} onChange={e => { setMissionId(+e.target.value); setErrors(v => ({ ...v, mission: '' })); }}>
+              value={missionId} onChange={e => onSelectMission(+e.target.value)}>
               <option value={0}>— Sélectionner —</option>
               {missionOptions.map(m => <option key={m.id} value={m.id}>{m.nom} — {m.client ?? ''}</option>)}
             </select>
             {errors.mission && <span style={{ fontSize: 10.5, color: 'var(--R)', marginTop: 2 }}>{errors.mission}</span>}
           </div>
+
+          {/* Info mission sélectionnée */}
+          {selectedMission && (
+            <div className="fr full">
+              <div style={{
+                background: 'var(--sur2)', border: `1px solid ${isOverBilling ? 'var(--A)' : 'var(--bor)'}`,
+                borderRadius: 'var(--r)', padding: '10px 14px', fontSize: 12,
+                display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px 16px',
+              }}>
+                <div>
+                  <div style={{ fontSize: 10, color: 'var(--tx3)', textTransform: 'uppercase', letterSpacing: '.07em' }}>Montant contractuel</div>
+                  <div className="fw7" style={{ fontFamily: 'var(--fm)', color: 'var(--tx1)' }}>{fmt(selectedMission.montant)} FCFA</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: 'var(--tx3)', textTransform: 'uppercase', letterSpacing: '.07em' }}>Déjà facturé</div>
+                  <div className="fw7" style={{ fontFamily: 'var(--fm)', color: alreadyBilledHT > 0 ? 'var(--A)' : 'var(--tx3)' }}>{fmt(alreadyBilledHT)} FCFA</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: 'var(--tx3)', textTransform: 'uppercase', letterSpacing: '.07em' }}>Restant à facturer</div>
+                  <div className="fw7" style={{ fontFamily: 'var(--fm)', color: remainingHT > 0 ? 'var(--G)' : 'var(--tx3)' }}>{fmt(remainingHT)} FCFA</div>
+                </div>
+              </div>
+              {isOverBilling && (
+                <div className="alert a" style={{ marginTop: 4, fontSize: 11 }}>
+                  Le montant HT saisi ({fmt(ht)} FCFA) dépasse le restant à facturer ({fmt(remainingHT)} FCFA).
+                </div>
+              )}
+            </div>
+          )}
+
           <Field label="N° Facture *" value={num} error={errors.num}
             onChange={e => setNum(e.target.value)} placeholder="FAC-2026-001" />
           <Field label="Date *" type="date" value={date} error={errors.date}
             onChange={e => setDate(e.target.value)} />
           <Field label="Montant HT (FCFA) *" type="number" value={ht} error={errors.ht}
-            onChange={e => setHt(+e.target.value)} />
+            onChange={e => { setHt(+e.target.value); setErrors(v => ({ ...v, ht: '' })); }} />
           <Field as="select" label="TVA" value={tvaType}
             onChange={e => setTvaType(e.target.value as 'exo' | '18')}>
             <option value="exo">Exonérée</option>
@@ -545,9 +462,6 @@ export default function Facturation() {
           </strong>
         </div>
       </Modal>
-
-      {/* ── Impression facture ── */}
-      {printFac && <FacturePrint facture={printFac} onClose={() => setPrintFac(null)} />}
 
       {/* ── Modal Encaissement Tranche ── */}
       <Modal

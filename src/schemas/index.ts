@@ -62,6 +62,7 @@ export const chargeSchema = z.object({
   type: z.enum(['prevu', 'imprevu']),
   per: z.string().min(1, 'La périodicité est requise'),
   budget: z.number().min(0, 'Doit être positif'),
+  moisApplicables: z.string(),
   obs: z.string(),
 });
 
@@ -104,6 +105,7 @@ export const petiteCaisseSchema = z.object({
   entree: z.number().min(0),
   sortie: z.number().min(0),
   pen: z.number().min(0),
+  refFacture: z.string(),
 }).refine(
   d => d.entree > 0 || d.sortie > 0,
   { message: 'Entrez un montant entrée ou sortie', path: ['entree'] }
@@ -115,20 +117,13 @@ export type PetiteCaisseInput = z.infer<typeof petiteCaisseSchema>;
 //  PARAMÈTRES
 // ─────────────────────────────────────────
 
+// Only manually-configurable fields (banque, coffre, masseSal, arrSal, arrSalR are computed)
 export const paramsSchema = z.object({
-  banque: z.number().min(0),
-  coffre: z.number().min(0),
-  masse_sal: z.number().min(0),
   charges_pat: z.number().min(0),
   primes_mens: z.number().min(0),
-  arr_sal: z.number().min(0),
-  arr_sal_r: z.number().min(0),
   arr_sal_m: z.number().min(0),
   arr_prim: z.number().min(0),
   arr_prim_m: z.number().min(0),
-}).refine(
-  d => d.arr_sal_r <= d.arr_sal,
-  { message: 'Le remboursé ne peut pas dépasser le total dû', path: ['arr_sal_r'] }
-);
+});
 
 export type ParamsInput = z.infer<typeof paramsSchema>;

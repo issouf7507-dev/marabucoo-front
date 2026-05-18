@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, CreditCard, CheckCircle2, Clock, Users, Printer, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, CreditCard, CheckCircle2, Clock, Users, Printer, Loader2 } from 'lucide-react';
+import { openBulletinPdf } from '../components/pdf/BulletinPdf';
 import { fmt, MF, MK, initials, THIS_YEAR } from '../utils/format';
 import YearSelect from '../components/ui/YearSelect';
 import { staffSchema, type StaffInput } from '../schemas';
@@ -24,169 +25,6 @@ function PaieStatut({ statut }: { statut: string | null | undefined }) {
   return <span className="bdg bn">{statut}</span>;
 }
 
-// ── Bulletin de paie ─────────────────────────────────────────────────
-
-interface BulletinProps {
-  staff: ApiStaff;
-  moisLabel: string;
-  annee: number;
-  montant: number;
-  statut: string;
-  onClose: () => void;
-}
-
-function BulletinPaie({ staff: s, moisLabel, annee, montant, statut, onClose }: BulletinProps) {
-  const today    = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
-  const ecart    = montant - s.salaire;
-  const initials = s.nom.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-
-  return (
-    <div className="fac-print-overlay">
-      <div className="fac-print-bar">
-        <button className="btn prim" onClick={() => window.print()}>
-          <Printer size={14} strokeWidth={2} />Imprimer le bulletin
-        </button>
-        <button className="btn" onClick={onClose}>
-          <X size={14} strokeWidth={2} />Fermer
-        </button>
-      </div>
-
-      <div className="fac-print-doc" style={{ minHeight: 'auto' }}>
-        {/* ── En-tête ── */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #18181b', paddingBottom: 20, marginBottom: 28 }}>
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-.02em', color: '#18181b' }}>MARABU SERVICES</div>
-            <div style={{ fontSize: 11, color: '#52525b', marginTop: 3 }}>Cabinet de conseil en management</div>
-            <div style={{ fontSize: 11, color: '#52525b' }}>Abidjan, Côte d'Ivoire</div>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color: '#18181b', letterSpacing: '-.03em' }}>BULLETIN DE PAIE</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#7c3aed', marginTop: 4, fontFamily: 'monospace' }}>
-              {moisLabel.toUpperCase()} {annee}
-            </div>
-            <div style={{ fontSize: 11, color: '#71717a', marginTop: 2 }}>Édité le {today}</div>
-          </div>
-        </div>
-
-        {/* ── Infos collaborateur ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 28 }}>
-          <div style={{ background: '#f4f4f5', borderRadius: 8, padding: '16px 18px' }}>
-            <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#a1a1aa', marginBottom: 10 }}>Collaborateur</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-              <div style={{
-                width: 44, height: 44, borderRadius: '50%', background: '#18181b', color: '#fff',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 700, fontSize: 15, flexShrink: 0,
-              }}>{initials}</div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>{s.nom}</div>
-                <div style={{ fontSize: 12, color: '#52525b', marginTop: 1 }}>{s.poste ?? '—'}</div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 11.5 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#71717a' }}>Type de contrat</span>
-                <span style={{ fontWeight: 600 }}>{s.nature}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#71717a' }}>Charge Marabu</span>
-                <span style={{ fontWeight: 600 }}>{s.marabu ? 'Oui' : 'Non'}</span>
-              </div>
-              {s.debut && (
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#71717a' }}>Date d'entrée</span>
-                  <span style={{ fontWeight: 600 }}>{s.debut.slice(0, 10)}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div style={{ background: '#f4f4f5', borderRadius: 8, padding: '16px 18px' }}>
-            <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#a1a1aa', marginBottom: 10 }}>Période & Statut</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 11.5 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#71717a' }}>Période</span>
-                <span style={{ fontWeight: 600 }}>{moisLabel} {annee}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#71717a' }}>Statut paiement</span>
-                <span style={{
-                  fontWeight: 700, padding: '1px 8px', borderRadius: 4,
-                  background: statut === 'Payé' ? '#dcfce7' : '#fef3c7',
-                  color: statut === 'Payé' ? '#166534' : '#92400e',
-                }}>{statut}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#71717a' }}>Date d'édition</span>
-                <span style={{ fontWeight: 600 }}>{today}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Détail de la rémunération ── */}
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#a1a1aa', marginBottom: 10 }}>Détail de la rémunération</div>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: '#18181b', color: '#fff' }}>
-                {['Rubrique', 'Base (FCFA)', 'Montant (FCFA)'].map((h, i) => (
-                  <th key={h} style={{ padding: '8px 12px', textAlign: i === 0 ? 'left' : 'right', fontSize: 10.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr style={{ borderBottom: '1px solid #e4e4e8' }}>
-                <td style={{ padding: '10px 12px', fontSize: 12, fontWeight: 600 }}>Salaire de base</td>
-                <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: 12, fontFamily: 'monospace' }}>{s.salaire.toLocaleString('fr-FR')}</td>
-                <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: 12, fontFamily: 'monospace', fontWeight: 700 }}>{s.salaire.toLocaleString('fr-FR')}</td>
-              </tr>
-              {ecart !== 0 && (
-                <tr style={{ borderBottom: '1px solid #e4e4e8' }}>
-                  <td style={{ padding: '10px 12px', fontSize: 12, color: ecart > 0 ? '#166534' : '#dc2626' }}>
-                    {ecart > 0 ? 'Prime / Complément' : 'Retenue / Ajustement'}
-                  </td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: 12, fontFamily: 'monospace' }}>—</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: 12, fontFamily: 'monospace', fontWeight: 700, color: ecart > 0 ? '#166534' : '#dc2626' }}>
-                    {ecart > 0 ? '+' : ''}{ecart.toLocaleString('fr-FR')}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            <tfoot>
-              <tr style={{ background: '#f4f4f5', borderTop: '2px solid #18181b' }}>
-                <td style={{ padding: '12px 12px', fontSize: 14, fontWeight: 700 }}>NET À PAYER</td>
-                <td></td>
-                <td style={{ padding: '12px 12px', textAlign: 'right', fontSize: 16, fontFamily: 'monospace', fontWeight: 700, color: '#166534' }}>
-                  {montant.toLocaleString('fr-FR')} FCFA
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        {/* ── Signatures ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, marginTop: 36 }}>
-          {[
-            { lbl: 'Signature employeur', sub: 'Marabu Services' },
-            { lbl: 'Signature collaborateur', sub: 'Lu et approuvé' },
-          ].map(({ lbl, sub }) => (
-            <div key={lbl} style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#52525b', marginBottom: 4 }}>{lbl}</div>
-              <div style={{ fontSize: 10, color: '#a1a1aa', marginBottom: 40 }}>{sub}</div>
-              <div style={{ borderTop: '1px solid #18181b', paddingTop: 6, fontSize: 10, color: '#71717a' }}>Signature &amp; Date</div>
-            </div>
-          ))}
-        </div>
-
-        {/* ── Footer ── */}
-        <div style={{ marginTop: 32, borderTop: '1px solid #e4e4e8', paddingTop: 14, fontSize: 10.5, color: '#a1a1aa', textAlign: 'center' }}>
-          Marabu Services — Abidjan, Côte d'Ivoire · Ce bulletin est un document confidentiel.
-        </div>
-      </div>
-    </div>
-  );
-}
 
 const staffInitial: StaffInput = {
   nom: '', poste: '', sal: 0, nature: 'CDI',
@@ -201,32 +39,36 @@ export default function Salaires() {
   const createMutation = useCreateStaff();
   const updateMutation = useUpdateStaff();
   const deleteMutation = useDeleteStaff();
-  const paieM          = useUpsertPaie();
+  const paieM = useUpsertPaie();
 
-  const [tab, setTab]         = useState<'mois' | 'annee' | 'collab'>('mois');
+  const [tab, setTab] = useState<'mois' | 'annee' | 'collab'>('mois');
   const [moisIdx, setMoisIdx] = useState(new Date().getMonth());
-  const [annee, setAnnee]     = useState(THIS_YEAR);
+  const [annee, setAnnee] = useState(THIS_YEAR);
   const [filActif, setFilActif] = useState('actif');
 
   // ── Modal collaborateur ──────────────────────────────────────────
   const [collabModal, setCollabModal] = useState(false);
-  const [editId, setEditId]           = useState<number | null>(null);
+  const [editId, setEditId] = useState<number | null>(null);
   const form = useForm(staffSchema, staffInitial);
 
   // ── Modal paiement individuel ────────────────────────────────────
-  const [payTarget, setPayTarget]   = useState<ApiStaff | null>(null);
+  const [payTarget, setPayTarget] = useState<ApiStaff | null>(null);
   const [payMontant, setPayMontant] = useState(0);
-  const [payStatut, setPayStatut]   = useState('Payé');
+  const [payStatut, setPayStatut] = useState('Payé');
 
-  // ── Bulletin de paie ─────────────────────────────────────────────
-  const [bulletin, setBulletin] = useState<{
-    staff: ApiStaff; montant: number; statut: string;
-  } | null>(null);
+  // ── Génération PDF bulletin ───────────────────────────────────────
+  const [pdfLoading, setPdfLoading] = useState<number | null>(null);
+
+  async function printBulletin(s: ApiStaff, montant: number, statut: string) {
+    setPdfLoading(s.id);
+    try { await openBulletinPdf(s, moisLabel, annee, montant, statut); }
+    finally { setPdfLoading(null); }
+  }
 
   // ── Modal paiement en masse ──────────────────────────────────────
   const [bulkModal, setBulkModal] = useState(false);
 
-  const moisKey   = MK[moisIdx];
+  const moisKey = MK[moisIdx];
   const moisLabel = MF[moisIdx];
 
   const activeStaff = staff.filter(s =>
@@ -234,14 +76,14 @@ export default function Salaires() {
   );
 
   // KPIs du mois sélectionné
-  const actifs      = staff.filter(s => s.actif);
-  const totalBase   = actifs.reduce((s, x) => s + x.salaire, 0);
-  const totalPaie   = actifs.reduce((s, x) => s + (getPaie(x, moisKey, annee)?.montant ?? 0), 0);
-  const nonPayes    = actifs.filter(x => !getPaie(x, moisKey, annee)?.montant);
+  const actifs = staff.filter(s => s.actif);
+  const totalBase = actifs.reduce((s, x) => s + x.salaire, 0);
+  const totalPaie = actifs.reduce((s, x) => s + (getPaie(x, moisKey, annee)?.montant ?? 0), 0);
+  const nonPayes = actifs.filter(x => !getPaie(x, moisKey, annee)?.montant);
   const resteAPayer = totalBase - totalPaie;
 
   // ── Collaborateur CRUD ───────────────────────────────────────────
-  function openNew()  { setEditId(null); form.reset(); setCollabModal(true); }
+  function openNew() { setEditId(null); form.reset(); setCollabModal(true); }
   function openEdit(s: ApiStaff) {
     setEditId(s.id);
     form.reset({
@@ -255,7 +97,7 @@ export default function Salaires() {
   async function saveCollab() {
     if (!form.validate()) return;
     if (editId) await updateMutation.mutateAsync({ id: editId, data: form.values });
-    else        await createMutation.mutateAsync(form.values);
+    else await createMutation.mutateAsync(form.values);
     setCollabModal(false);
   }
 
@@ -269,9 +111,9 @@ export default function Salaires() {
   async function savePay() {
     if (!payTarget) return;
     await paieM.mutateAsync({ id: payTarget.id, mois: moisKey, annee: annee, montant: payMontant, statut: payStatut });
-    const saved = { staff: payTarget, montant: payMontant, statut: payStatut };
+    const target = payTarget;
     setPayTarget(null);
-    setBulletin(saved);
+    await printBulletin(target, payMontant, payStatut);
   }
 
   // ── Paiement en masse ────────────────────────────────────────────
@@ -322,17 +164,17 @@ export default function Salaires() {
           <div className="kpi-v">{fmt(resteAPayer)}</div>
           <div className="kpi-s">{nonPayes.length} collaborateur(s)</div>
         </div>
-        <div className="kpi a">
+        {/* <div className="kpi a">
           <div className="kpi-l">Arriéré</div>
           <div className="kpi-v">{fmt((params?.arrSal ?? 0) - (params?.arrSalR ?? 0))}</div>
           <div className="kpi-s">FCFA restants</div>
-        </div>
+        </div> */}
       </div>
 
       {/* ── Tabs ── */}
       <div className="tabs">
-        <button className={`tab${tab === 'mois'   ? ' on' : ''}`} onClick={() => setTab('mois')}>Paiement mensuel</button>
-        <button className={`tab${tab === 'annee'  ? ' on' : ''}`} onClick={() => setTab('annee')}>Grille annuelle</button>
+        <button className={`tab${tab === 'mois' ? ' on' : ''}`} onClick={() => setTab('mois')}>Paiement mensuel</button>
+        <button className={`tab${tab === 'annee' ? ' on' : ''}`} onClick={() => setTab('annee')}>Grille annuelle</button>
         <button className={`tab${tab === 'collab' ? ' on' : ''}`} onClick={() => setTab('collab')}>
           <Users size={13} strokeWidth={2} style={{ display: 'inline', marginRight: 5 }} />
           Collaborateurs
@@ -390,8 +232,8 @@ export default function Salaires() {
                 <tbody>
                   <QueryRows isLoading={isLoading} error={error} colSpan={7} />
                   {!isLoading && !error && activeStaff.map(s => {
-                    const paie  = getPaie(s, moisKey, annee);
-                    const paid  = !!paie?.montant;
+                    const paie = getPaie(s, moisKey, annee);
+                    const paid = !!paie?.montant;
                     const ecart = (paie?.montant ?? 0) - s.salaire;
                     return (
                       <tr key={s.id} style={paid ? undefined : { background: 'var(--Al)' }}>
@@ -434,11 +276,15 @@ export default function Salaires() {
                             {paid && (
                               <button
                                 className="btn xs"
-                                title="Imprimer le bulletin"
+                                title="Générer bulletin PDF"
                                 style={{ gap: 4 }}
-                                onClick={() => setBulletin({ staff: s, montant: paie!.montant!, statut: paie!.statut ?? 'Payé' })}
+                                disabled={pdfLoading === s.id}
+                                onClick={() => printBulletin(s, paie!.montant!, paie!.statut ?? 'Payé')}
                               >
-                                <Printer size={12} strokeWidth={2} />
+                                {pdfLoading === s.id
+                                  ? <Loader2 size={12} strokeWidth={2} style={{ animation: 'spin 1s linear infinite' }} />
+                                  : <Printer size={12} strokeWidth={2} />
+                                }
                               </button>
                             )}
                           </div>
@@ -498,7 +344,7 @@ export default function Salaires() {
                             </div>
                           </td>
                           {MK.map((k, i) => {
-                            const p    = getPaie(s, k, annee);
+                            const p = getPaie(s, k, annee);
                             const paid = !!p?.montant;
                             const past = i < new Date().getMonth();
                             const late = past && !paid && s.actif;
@@ -606,18 +452,6 @@ export default function Salaires() {
             </table>
           </div>
         </div>
-      )}
-
-      {/* ── Bulletin de paie ── */}
-      {bulletin && (
-        <BulletinPaie
-          staff={bulletin.staff}
-          moisLabel={moisLabel}
-          annee={annee}
-          montant={bulletin.montant}
-          statut={bulletin.statut}
-          onClose={() => setBulletin(null)}
-        />
       )}
 
       {/* ── Modal paiement individuel ── */}
