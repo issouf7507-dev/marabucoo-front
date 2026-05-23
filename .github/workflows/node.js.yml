@@ -38,6 +38,8 @@ jobs:
 
       - name: Build
         run: pnpm build
+        env:
+          VITE_API_BASE: ${{ secrets.VITE_API_BASE }}
 
       - name: Upload files to VPS
         uses: appleboy/scp-action@v0.1.7

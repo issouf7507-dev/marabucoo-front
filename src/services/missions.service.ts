@@ -34,4 +34,5 @@ export const missionsService = {
   update:    (id: number, data: Partial<MissionInput>) => api.put<ApiMission>(`/missions/${id}`, toApiBodyPartial(data)),
   remove:    (id: number)                   => api.delete<void>(`/missions/${id}`),
   updateEnc: (id: number, enc: Record<string, number>) => api.put<void>(`/missions/${id}/enc`, enc),
+  sync:      ()                             => api.post<{ synced: number; total: number }>('/missions/sync', {}),
 };

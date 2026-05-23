@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Save, Plus, ShieldCheck, Eye, Briefcase, Lock, Unlock, Trash2, KeyRound, RefreshCw } from 'lucide-react';
+import { Save, Plus, ShieldCheck, Eye, Briefcase, Lock, Unlock, Trash2, KeyRound, RefreshCw, FileCheck2, CheckCircle2 } from 'lucide-react';
 import { fmt } from '../utils/format';
 import { useParams, useUpdateParams } from '../hooks/queries/useParams';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '../hooks/queries/useUsers';
+import { useClients, useUpdateClient } from '../hooks/queries/useClients';
 import { useAuth } from '../context/AuthContext';
 import { changePasswordRequest } from '../services/auth.service';
 import { QueryCard, QueryRows } from '../components/ui/QueryState';
@@ -531,10 +532,221 @@ function TabUtilisateurs() {
 }
 
 // ─────────────────────────────────────────────────────
+//  Onglet Clients FNE
+// ─────────────────────────────────────────────────────
+
+interface FneForm {
+  ncc: string; fneTemplate: 'B2C' | 'B2B' | 'B2G' | 'B2F';
+  fnePointOfSale: string; fneEstablishment: string;
+  tel: string; email: string;
+}
+
+const EMPTY_FNE_FORM: FneForm = {
+  ncc: '', fneTemplate: 'B2C', fnePointOfSale: '', fneEstablishment: '', tel: '', email: '',
+};
+
+function TabClientsFNE() {
+  const { data: clients = [], isLoading, error } = useClients();
+  const updateMutation = useUpdateClient();
+  const [editing, setEditing] = useState<number | null>(null);
+  const [form,    setForm]    = useState<FneForm>(EMPTY_FNE_FORM);
+  const [saved,   setSaved]   = useState<number | null>(null);
+
+  if (isLoading) return <QueryCard isLoading error={null} />;
+  if (error)     return <QueryCard isLoading={false} error={error} />;
+
+  function openEdit(clientId: number) {
+    const c = clients.find(c => c.id === clientId);
+    if (!c) return;
+    setForm({
+      ncc:              c.ncc              ?? '',
+      fneTemplate:      (c.fneTemplate as FneForm['fneTemplate']) ?? 'B2C',
+      fnePointOfSale:   c.fnePointOfSale  ?? '',
+      fneEstablishment: c.fneEstablishment ?? '',
+      tel:              c.tel              ?? '',
+      email:            c.email            ?? '',
+    });
+    setEditing(clientId);
+  }
+
+  async function save() {
+    if (editing === null) return;
+    await updateMutation.mutateAsync({ id: editing, data: form });
+    setSaved(editing);
+    setEditing(null);
+    setTimeout(() => setSaved(null), 2000);
+  }
+
+  const configured = clients.filter(c => c.fneTemplate).length;
+
+  return (
+    <>
+      {/* KPIs */}
+      <div className="kr" style={{ marginBottom: 16 }}>
+        <div className="kpi">
+          <div className="kpi-l">Total clients</div>
+          <div className="kpi-v">{clients.length}</div>
+          <div className="kpi-s">dans l'application</div>
+        </div>
+        <div className="kpi g">
+          <div className="kpi-l">Configurés FNE</div>
+          <div className="kpi-v">{configured}</div>
+          <div className="kpi-s">prêts à normaliser</div>
+        </div>
+        <div className="kpi a">
+          <div className="kpi-l">À configurer</div>
+          <div className="kpi-v">{clients.length - configured}</div>
+          <div className="kpi-s">infos FNE manquantes</div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="ch">
+          <h3>Informations FNE par client</h3>
+          <span className="bdg bn">{clients.length} client{clients.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div className="tw">
+          <table>
+            <thead>
+              <tr>
+                <th>Client</th>
+                <th>Secteur</th>
+                <th>Tél</th>
+                <th>Email</th>
+                <th>NCC</th>
+                <th>Template</th>
+                <th>Point de vente</th>
+                <th>Établissement</th>
+                <th>Statut</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {clients.map(c => {
+                const done = saved === c.id;
+                const hasFne = !!c.fneTemplate;
+                return (
+                  <tr key={c.id}>
+                    <td style={{ fontWeight: 600 }}>{c.nom}</td>
+                    <td style={{ color: 'var(--tx3)', fontSize: 11 }}>{c.secteur ?? '—'}</td>
+                    <td style={{ fontFamily: 'var(--fm)', fontSize: 11 }}>{c.tel || <span style={{ color: 'var(--tx3)' }}>—</span>}</td>
+                    <td style={{ fontSize: 11 }}>{c.email || <span style={{ color: 'var(--tx3)' }}>—</span>}</td>
+                    <td style={{ fontFamily: 'var(--fm)', fontSize: 11, fontWeight: 600 }}>
+                      {c.ncc ? <span style={{ color: 'var(--tx)' }}>{c.ncc}</span> : <span style={{ color: 'var(--tx3)' }}>—</span>}
+                    </td>
+                    <td>
+                      {c.fneTemplate
+                        ? <span className="bdg bb" style={{ fontFamily: 'var(--fm)' }}>{c.fneTemplate}</span>
+                        : <span style={{ color: 'var(--tx3)', fontSize: 11 }}>—</span>}
+                    </td>
+                    <td style={{ fontSize: 11, color: 'var(--tx2)' }}>{c.fnePointOfSale || <span style={{ color: 'var(--tx3)' }}>—</span>}</td>
+                    <td style={{ fontSize: 11, color: 'var(--tx2)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {c.fneEstablishment || <span style={{ color: 'var(--tx3)' }}>—</span>}
+                    </td>
+                    <td>
+                      {done ? (
+                        <span className="bdg bg" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <CheckCircle2 size={9} strokeWidth={2.5} />Sauvegardé
+                        </span>
+                      ) : hasFne ? (
+                        <span className="bdg bg">Configuré</span>
+                      ) : (
+                        <span className="bdg ba">À compléter</span>
+                      )}
+                    </td>
+                    <td>
+                      <button
+                        onClick={() => openEdit(c.id)}
+                        className="btn xs"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                      >
+                        {hasFne ? 'Modifier' : 'Configurer'}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Modal d'édition */}
+      <Modal
+        open={editing !== null}
+        title={`Config FNE — ${clients.find(c => c.id === editing)?.nom ?? ''}`}
+        onClose={() => setEditing(null)}
+        onSave={save}
+        saveLabel={updateMutation.isPending ? 'Enregistrement…' : 'Enregistrer'}
+        saving={updateMutation.isPending}
+        width={560}
+      >
+        {editing !== null && (() => {
+          const client = clients.find(c => c.id === editing);
+          return (
+            <>
+              <div style={{ background: 'var(--sur2)', borderRadius: 'var(--r)', padding: '8px 12px', marginBottom: 14, fontSize: 11, color: 'var(--tx2)' }}>
+                <strong style={{ color: 'var(--tx)' }}>{client?.nom}</strong>
+                {client?.secteur && <span style={{ color: 'var(--tx3)' }}> · {client.secteur}</span>}
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <div className="lbl" style={{ marginBottom: 5 }}>Template FNE</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {(['B2C', 'B2B', 'B2G', 'B2F'] as const).map(t => (
+                    <button key={t} onClick={() => setForm(f => ({ ...f, fneTemplate: t }))}
+                      style={{
+                        flex: 1, padding: '6px 0', borderRadius: 'var(--r)', cursor: 'pointer',
+                        fontWeight: 600, fontSize: 11, fontFamily: 'var(--fm)',
+                        border: form.fneTemplate === t ? '1.5px solid var(--G)' : '1px solid var(--bor2)',
+                        background: form.fneTemplate === t ? 'rgba(0,196,98,.1)' : 'var(--sur2)',
+                        color: form.fneTemplate === t ? 'var(--G)' : 'var(--tx3)',
+                        transition: '.12s',
+                      }}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ fontSize: 10.5, color: 'var(--tx3)', marginTop: 4 }}>
+                  {form.fneTemplate === 'B2C' && 'Particulier'}
+                  {form.fneTemplate === 'B2B' && 'Professionnel – NCC obligatoire'}
+                  {form.fneTemplate === 'B2G' && 'Institution gouvernementale'}
+                  {form.fneTemplate === 'B2F' && 'Client étranger (devise étrangère possible)'}
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {form.fneTemplate === 'B2B' && (
+                  <Field label="NCC (Numéro Compte Contribuable) *" value={form.ncc}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, ncc: e.target.value }))}
+                    placeholder="9502363N" full />
+                )}
+                <Field label="Téléphone" type="tel" value={form.tel}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, tel: e.target.value }))}
+                  placeholder="0709080765" />
+                <Field label="Email" type="email" value={form.email}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, email: e.target.value }))}
+                  placeholder="info@client.ci" />
+                <Field label="Point de vente" value={form.fnePointOfSale}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, fnePointOfSale: e.target.value }))}
+                  placeholder="23" />
+                <Field label="Établissement" value={form.fneEstablishment}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, fneEstablishment: e.target.value }))}
+                  placeholder="Orange Riviera Mpouto" full />
+              </div>
+            </>
+          );
+        })()}
+      </Modal>
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────
 //  Page principale
 // ─────────────────────────────────────────────────────
 
-type Tab = 'general' | 'profil' | 'utilisateurs';
+type Tab = 'general' | 'profil' | 'utilisateurs' | 'clients-fne';
 
 export default function Parametres() {
   const { user } = useAuth();
@@ -553,6 +765,11 @@ export default function Parametres() {
       <div className="tabs">
         <button className={`tab${tab === 'general'       ? ' on' : ''}`} onClick={() => setTab('general')}>Général</button>
         <button className={`tab${tab === 'profil'        ? ' on' : ''}`} onClick={() => setTab('profil')}>Mon profil</button>
+        <button className={`tab${tab === 'clients-fne'   ? ' on' : ''}`} onClick={() => setTab('clients-fne')}
+          style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <FileCheck2 size={13} strokeWidth={2} style={{ display: 'inline', verticalAlign: 'middle' }} />
+          Clients FNE
+        </button>
         {isAdmin && (
           <button className={`tab${tab === 'utilisateurs' ? ' on' : ''}`} onClick={() => setTab('utilisateurs')}>
             <ShieldCheck size={13} strokeWidth={2} style={{ display: 'inline', marginRight: 5, verticalAlign: 'middle' }} />
@@ -563,6 +780,7 @@ export default function Parametres() {
 
       {tab === 'general'       && <TabGeneral />}
       {tab === 'profil'        && <TabProfil />}
+      {tab === 'clients-fne'   && <TabClientsFNE />}
       {tab === 'utilisateurs'  && isAdmin && <TabUtilisateurs />}
     </div>
   );

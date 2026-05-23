@@ -707,6 +707,8 @@ tfoot td {
   border-radius: var(--r);
   border: 1px solid var(--bor);
   padding: 10px;
+  height: 400px;
+  overflow-y: scroll;
 }
 .pl-col-h {
   font-size: 9px;
@@ -717,6 +719,7 @@ tfoot td {
   margin-bottom: 8px;
   text-align: center;
   font-family: var(--fm);
+  /* height: 400px; */
 }
 .pl-item {
   background: var(--sur);
@@ -727,6 +730,7 @@ tfoot td {
   cursor: pointer;
   transition: 0.12s;
   border-left: 2px solid var(--G);
+  /* height: 400px; */
 }
 .pl-item:hover {
   border-color: var(--bor2);
@@ -970,7 +974,7 @@ option {
 .fac-print-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, .75);
+  background: rgba(0, 0, 0, 0.75);
   z-index: 2000;
   display: flex;
   flex-direction: column;
@@ -991,14 +995,23 @@ option {
   width: 794px;
   min-height: 1123px;
   padding: 56px 64px;
-  font-family: 'Geist', system-ui, sans-serif;
+  font-family: "Geist", system-ui, sans-serif;
   font-size: 13px;
   line-height: 1.5;
-  box-shadow: 0 8px 40px rgba(0,0,0,.4);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
 }
 @media print {
-  html, body { height: auto !important; overflow: visible !important; background: #fff !important; }
-  #root { display: block !important; height: auto !important; overflow: visible !important; }
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+  #root {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
   .fac-print-overlay {
     position: static !important;
     background: none !important;
@@ -1006,14 +1019,19 @@ option {
     backdrop-filter: none !important;
     display: block !important;
   }
-  .fac-print-bar { display: none !important; }
+  .fac-print-bar {
+    display: none !important;
+  }
   .fac-print-doc {
     box-shadow: none !important;
     width: 100% !important;
     min-height: auto !important;
     padding: 32px 40px !important;
   }
-  .sb, .main { display: none !important; }
+  .sb,
+  .main {
+    display: none !important;
+  }
 }
 
 @media (max-width: 800px) {

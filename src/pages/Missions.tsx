@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Pencil, Trash2, RefreshCw } from 'lucide-react';
 import { fmt, ST_LABEL, ST_CLS } from '../utils/format';
 import { missionSchema, type MissionInput } from '../schemas';
 import { useForm } from '../hooks/useForm';
-import { useMissions, useCreateMission, useUpdateMission, useDeleteMission } from '../hooks/queries/useMissions';
+import { useMissions, useCreateMission, useUpdateMission, useDeleteMission, useSyncMissions } from '../hooks/queries/useMissions';
 import Modal from '../components/ui/Modal';
 import Field from '../components/ui/Field';
 import ClientPicker from '../components/ui/ClientPicker';
@@ -28,6 +28,16 @@ export default function Missions() {
   const createMutation = useCreateMission();
   const updateMutation = useUpdateMission();
   const deleteMutation = useDeleteMission();
+  const syncMutation = useSyncMissions();
+
+  // Sync depuis l'API externe à chaque affichage de la page
+  const syncedOnMount = useRef(false);
+  useEffect(() => {
+    if (syncedOnMount.current) return;
+    syncedOnMount.current = true;
+    syncMutation.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [filSt, setFilSt] = useState('');
   const [filAp, setFilAp] = useState('');
@@ -36,11 +46,11 @@ export default function Missions() {
   const form = useForm(missionSchema, initial);
 
   // KPIs
-  const active     = missions.filter(m => !['TERMINE', 'PERDU'].includes(m.statut.toUpperCase()));
+  const active = missions.filter(m => !['TERMINE', 'PERDU'].includes(m.statut.toUpperCase()));
   const contracted = missions.filter(m => ['CONTRAT', 'EN_COURS'].includes(m.statut.toUpperCase()));
-  const caPipeline  = active.reduce((s, m) => s + m.montant, 0);
+  const caPipeline = active.reduce((s, m) => s + m.montant, 0);
   const caContracte = contracted.reduce((s, m) => s + m.montant, 0);
-  const caEncaisse  = missions.reduce((s, m) => s + m.avance, 0);
+  const caEncaisse = missions.reduce((s, m) => s + m.avance, 0);
 
   const list = missions.filter(m =>
     (!filSt || m.statut.toLowerCase() === filSt) &&
@@ -90,7 +100,13 @@ export default function Missions() {
           <h1>Missions & Pipeline</h1>
           <p>Cycle complet Prospect → TDR → Propale → Contrat → Facturation → Clôture</p>
         </div>
-        <div className="ph-r">
+        <div className="ph-r" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {syncMutation.isPending && (
+            <span style={{ fontSize: 11, color: 'var(--tx3)', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <RefreshCw size={12} style={{ animation: 'spin 1s linear infinite' }} />
+              Synchronisation…
+            </span>
+          )}
           <button className="btn prim" onClick={openNew}><Plus size={15} strokeWidth={2.5} />Nouvelle mission</button>
         </div>
       </div>
@@ -123,7 +139,7 @@ export default function Missions() {
       <div className="pl-board">
         {STAGES.map(s => {
           const items = missions.filter(m => m.statut.toLowerCase() === s);
-          const col   = STAGE_COLOR[s];
+          const col = STAGE_COLOR[s];
           return (
             <div key={s} className="pl-col" style={{ borderTop: `3px solid ${col}` }}>
               <div className="pl-col-h" style={{ color: col }}>

@@ -7,8 +7,8 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        // target: "http://localhost:4000llllll",
-        target: "https://api.marabucoo.marabu.services",
+        target: "http://localhost:4000",
+        // target: "https://api.marabucoo.marabu.services",
         changeOrigin: true,
       },
     },
