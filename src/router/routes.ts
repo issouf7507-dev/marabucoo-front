@@ -12,4 +12,5 @@ export const ROUTES = {
   BFR:          '/bfr',
   TVA:          '/tva',
   PARAMETRES:   '/parametres',
+  FNE:          '/fne',
 } as const;

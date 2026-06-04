@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Kanban, FileText, TrendingUp,
   Users, Layers, Landmark, Wallet,
-  BarChart3, Calculator, Percent, Settings, LogOut, Sun, Moon,
+  BarChart3, Calculator, Percent, Settings, LogOut, Sun, Moon, FileCheck2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { initials } from '../../utils/format';
@@ -20,6 +20,7 @@ const sections: { title: string; items: NavItem[] }[] = [
     items: [
       { to: ROUTES.MISSIONS, label: 'Missions & Pipeline', Icon: Kanban },
       { to: ROUTES.FACTURATION, label: 'Facturation', Icon: FileText },
+      { to: ROUTES.FNE, label: 'FNE – DGI', Icon: FileCheck2 },
       { to: ROUTES.ENCAISSEMENTS, label: 'Encaissements', Icon: TrendingUp },
     ],
   },

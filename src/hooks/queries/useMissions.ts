@@ -52,3 +52,11 @@ export function useUpdateEnc() {
     onSuccess: () => qc.invalidateQueries({ queryKey: MISSIONS_KEY }),
   });
 }
+
+export function useSyncMissions() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: missionsService.sync,
+    onSuccess: () => qc.invalidateQueries({ queryKey: MISSIONS_KEY }),
+  });
+}

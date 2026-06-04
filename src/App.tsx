@@ -20,6 +20,7 @@ import Tresorerie  from './pages/Tresorerie';
 import BFR         from './pages/BFR';
 import TVA         from './pages/TVA';
 import Parametres  from './pages/Parametres';
+import FNE         from './pages/FNE';
 
 export default function App() {
   return (
@@ -54,6 +55,7 @@ export default function App() {
                   <Route path={ROUTES.BFR}          element={<BFR />} />
                   <Route path={ROUTES.TVA}          element={<TVA />} />
                   <Route path={ROUTES.PARAMETRES}   element={<Parametres />} />
+                  <Route path={ROUTES.FNE}          element={<FNE />} />
                 </Route>
               </Route>
 
