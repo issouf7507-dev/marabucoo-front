@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { petiteCaisseService } from '../../services/petitecaisse.service';
 import type { PetiteCaisseInput } from '../../schemas';
+import { PARAMS_KEY } from './useParams';
 
 export const PC_KEY = ['petite-caisse'] as const;
 
@@ -15,7 +16,10 @@ export function useCreatePC() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: PetiteCaisseInput) => petiteCaisseService.create(data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: PC_KEY }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: PC_KEY });
+      qc.invalidateQueries({ queryKey: PARAMS_KEY });
+    },
   });
 }
 
@@ -24,7 +28,10 @@ export function useUpdatePC() {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<PetiteCaisseInput> }) =>
       petiteCaisseService.update(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: PC_KEY }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: PC_KEY });
+      qc.invalidateQueries({ queryKey: PARAMS_KEY });
+    },
   });
 }
 
@@ -32,6 +39,9 @@ export function useDeletePC() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => petiteCaisseService.remove(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: PC_KEY }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: PC_KEY });
+      qc.invalidateQueries({ queryKey: PARAMS_KEY });
+    },
   });
 }
