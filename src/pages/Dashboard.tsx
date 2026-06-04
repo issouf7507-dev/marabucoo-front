@@ -33,8 +33,10 @@ export default function Dashboard() {
   const error     = eP || eC || eM;
 
   // ── Calculs ──────────────────────────────────────────────────
-  const bq       = params?.banque    ?? 0;
-  const cf       = params?.coffre    ?? 0;
+  const bq       = params?.banque           ?? 0;
+  const cf       = params?.coffre           ?? 0;
+  const frais    = params?.totalFraisTransf ?? 0;
+  const penalite = params?.totalPenalite    ?? 0;
   const treso    = bq + cf;
   const chgMens  = useMemo(() => charges.reduce((s, c) => s + (c.budget || 0), 0), [charges]);
   const bfr      = treso - chgMens;
@@ -220,6 +222,16 @@ export default function Dashboard() {
               <div className="kpi-l">TVA à reverser</div>
               <div className="kpi-v">{fmt(tvaTot)}</div>
               <div className="kpi-s">estimation 18%</div>
+            </div>
+            <div className="kpi a">
+              <div className="kpi-l">Frais de transfert</div>
+              <div className="kpi-v">{fmt(frais)}</div>
+              <div className="kpi-s">FCFA cumulés</div>
+            </div>
+            <div className="kpi r">
+              <div className="kpi-l">Pénalités</div>
+              <div className="kpi-v">{fmt(penalite)}</div>
+              <div className="kpi-s">FCFA cumulés</div>
             </div>
           </div>
 

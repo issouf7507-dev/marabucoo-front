@@ -13,6 +13,8 @@ export interface ApiParams {
   arrSalM: number;
   arrPrim: number;
   arrPrimM: number;
+  totalFraisTransf: number;
+  totalPenalite: number;
 }
 
 export const paramsService = {
