@@ -135,7 +135,19 @@ export default function Dashboard() {
           plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, color: cTx3, padding: 8 } } },
           scales: {
             x: { ticks: { color: cTx3, font: { size: 10 } }, grid: { color: cBor } },
-            y: { ticks: { callback: v => Math.round(Number(v) / 1000000) + 'M', color: cTx3, font: { size: 10 } }, grid: { color: cBor } },
+            y: {
+              ticks: {
+                callback: v => {
+                  const n = Number(v);
+                  if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' M';
+                  if (Math.abs(n) >= 1_000)     return (n / 1_000).toLocaleString('fr-FR',     { maximumFractionDigits: 0 }) + ' k';
+                  return n.toLocaleString('fr-FR');
+                },
+                color: cTx3, font: { size: 10 },
+              },
+              grid: { color: cBor },
+              title: { display: true, text: 'FCFA', color: cTx3, font: { size: 9 } },
+            },
           },
         },
       });

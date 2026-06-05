@@ -27,6 +27,11 @@ export const depensesService = {
     montant: data.mnt, fraisTransf: data.ft, penalite: data.pen,
     reference: data.ref, nature: data.nature,
   }),
-  update: (id: number, data: Partial<DepenseInput>) => api.put<ApiDepense>(`/depenses/${id}`, data),
+  update: (id: number, data: Partial<DepenseInput>) => api.put<ApiDepense>(`/depenses/${id}`, {
+    type: data.type, categorie: data.cat, periode: data.per, intitule: data.int,
+    date: data.date, designation: data.des, prestataire: data.prest,
+    montant: data.mnt, fraisTransf: data.ft, penalite: data.pen,
+    reference: data.ref, nature: data.nature,
+  }),
   remove: (id: number) => api.delete<void>(`/depenses/${id}`),
 };
