@@ -96,7 +96,7 @@ export default function Depenses() {
         .reduce((s, d) => s + d.montant, 0);
       const sorties = moisDeps
         .filter((d) => d.type === "SORTIE BANQUE")
-        .reduce((s, d) => s + d.montant, 0);
+        .reduce((s, d) => s + d.montant + (d.fraisTransf || 0) + (d.penalite || 0), 0);
       return { entrees, sorties };
     });
     const totE = rows.reduce((s, r) => s + r.entrees, 0);
@@ -114,7 +114,7 @@ export default function Depenses() {
     .reduce((s, d) => s + d.montant, 0);
   const totalDebits = filtered
     .filter((d) => d.type === "SORTIE BANQUE")
-    .reduce((s, d) => s + d.montant, 0);
+    .reduce((s, d) => s + d.montant + (d.fraisTransf || 0) + (d.penalite || 0), 0);
 
   function openNew() {
     setEditId(null);
@@ -257,17 +257,18 @@ export default function Depenses() {
                 <th>Prestataire</th>
                 <th>Montant</th>
                 <th>Frais transf.</th>
+                <th>Pénalité</th>
                 <th>Référence</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              <QueryRows isLoading={isLoading} error={error} colSpan={10} />
+              <QueryRows isLoading={isLoading} error={error} colSpan={11} />
               {!isLoading &&
                 !error &&
                 (filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="empty">
+                    <td colSpan={11} className="empty">
                       Aucune opération
                     </td>
                   </tr>
@@ -308,6 +309,12 @@ export default function Depenses() {
                         style={{ color: "var(--tx3)", fontSize: 11 }}
                       >
                         {d.fraisTransf > 0 ? fmt(d.fraisTransf) : "—"}
+                      </td>
+                      <td
+                        className="tnum"
+                        style={{ color: "var(--tx3)", fontSize: 11 }}
+                      >
+                        {d.penalite > 0 ? fmt(d.penalite) : "—"}
                       </td>
                       <td style={{ fontSize: 11, color: "var(--tx3)" }}>
                         {d.reference ?? "—"}
