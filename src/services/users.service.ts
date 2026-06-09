@@ -4,7 +4,7 @@ export interface ApiUser {
   id: string;
   name: string;
   email: string;
-  role: 'ADMIN' | 'COO' | 'VIEWER';
+  role: 'ADMIN' | 'COO' | 'VIEWER' | 'ASSISTANTE';
   active: boolean;
   createdAt: string;
 }
@@ -13,7 +13,7 @@ export interface CreateUserInput {
   name: string;
   email: string;
   password: string;
-  role: 'ADMIN' | 'COO' | 'VIEWER';
+  role: 'ADMIN' | 'COO' | 'VIEWER' | 'ASSISTANTE';
 }
 
 export const usersService = {
