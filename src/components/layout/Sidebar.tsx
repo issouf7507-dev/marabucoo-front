@@ -10,7 +10,7 @@ import { ROUTES } from '../../router/routes';
 
 interface NavItem { to: string; label: string; Icon: LucideIcon }
 
-const sections: { title: string; items: NavItem[] }[] = [
+const allSections: { title: string; items: NavItem[] }[] = [
   {
     title: 'Vue globale',
     items: [{ to: ROUTES.DASHBOARD, label: 'Tableau de bord', Icon: LayoutDashboard }],
@@ -47,6 +47,15 @@ const sections: { title: string; items: NavItem[] }[] = [
   },
 ];
 
+const ASSISTANTE_ROUTES = new Set([ROUTES.DASHBOARD, ROUTES.PETITE_CAISSE]);
+
+function getSections(role: string) {
+  if (role !== 'ASSISTANTE') return allSections;
+  return allSections
+    .map(s => ({ ...s, items: s.items.filter(i => ASSISTANTE_ROUTES.has(i.to)) }))
+    .filter(s => s.items.length > 0);
+}
+
 interface SidebarProps {
   user: { name: string; email: string; role: string };
   onLogout: () => void;
@@ -55,6 +64,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ user, onLogout, theme, onToggleTheme }: SidebarProps) {
+  const sections = getSections(user.role);
   return (
     <aside className="sb">
       <div className="sb-brand">

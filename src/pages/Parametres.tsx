@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Plus, ShieldCheck, Eye, Briefcase, Lock, Unlock, Trash2, KeyRound, RefreshCw, FileCheck2, CheckCircle2 } from 'lucide-react';
+import { Save, Plus, ShieldCheck, Eye, Briefcase, Lock, Unlock, Trash2, KeyRound, RefreshCw, FileCheck2, CheckCircle2, Wallet } from 'lucide-react';
 import { fmt } from '../utils/format';
 import { useParams, useUpdateParams } from '../hooks/queries/useParams';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '../hooks/queries/useUsers';
@@ -35,8 +35,8 @@ const PARAM_REF = [
   { lib: 'Mensualité remboursement primes',  key: 'arrPrimM'    as const, per: 'Mensuelle', obs: '', auto: false },
 ];
 
-const ROLE_LABEL: Record<string, string> = { ADMIN: 'Admin', COO: 'COO', VIEWER: 'Lecteur' };
-const ROLE_CLS:   Record<string, string> = { ADMIN: 'br',    COO: 'bb',  VIEWER: 'bn' };
+const ROLE_LABEL: Record<string, string> = { ADMIN: 'Admin', COO: 'COO', VIEWER: 'Lecteur', ASSISTANTE: 'Assistante' };
+const ROLE_CLS:   Record<string, string> = { ADMIN: 'br',    COO: 'bb',  VIEWER: 'bn',    ASSISTANTE: 'ba' };
 
 // ─────────────────────────────────────────────────────
 //  Onglet Général
@@ -354,7 +354,7 @@ function TabUtilisateurs() {
   const [name,  setName]    = useState('');
   const [email, setEmail]   = useState('');
   const [pwd,   setPwd]     = useState('');
-  const [role,  setRole]    = useState<'ADMIN' | 'COO' | 'VIEWER'>('VIEWER');
+  const [role,  setRole]    = useState<'ADMIN' | 'COO' | 'VIEWER' | 'ASSISTANTE'>('VIEWER');
   const [err,   setErr]     = useState<string | null>(null);
 
   function openModal() { setName(''); setEmail(''); setPwd(''); setRole('VIEWER'); setErr(null); setModal(true); }
@@ -394,6 +394,7 @@ function TabUtilisateurs() {
             <span className="bdg br">Admin</span>
             <span className="bdg bb">COO</span>
             <span className="bdg bn">Lecteur</span>
+            <span className="bdg ba">Assistante</span>
           </div>
         </div>
         <div className="tw">
@@ -440,6 +441,7 @@ function TabUtilisateurs() {
                             <option value="ADMIN">Admin</option>
                             <option value="COO">COO</option>
                             <option value="VIEWER">Lecteur</option>
+                            <option value="ASSISTANTE">Assistante</option>
                           </select>
                         )
                       }
@@ -487,11 +489,12 @@ function TabUtilisateurs() {
       <div className="card" style={{ marginTop: 14 }}>
         <div className="ch"><h3>Description des rôles</h3></div>
         <div className="cb">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
             {[
-              { role: 'ADMIN', Icon: ShieldCheck, color: 'var(--R)', desc: 'Accès complet — gestion des utilisateurs, paramètres, toutes les pages. Peut bloquer ou supprimer des comptes.' },
-              { role: 'COO',   Icon: Briefcase,   color: 'var(--B)', desc: 'Accès complet à toutes les pages métier. Ne peut pas gérer les utilisateurs ni les paramètres système.' },
-              { role: 'VIEWER',Icon: Eye,          color: 'var(--tx2)', desc: 'Lecture seule — peut consulter toutes les pages mais ne peut pas créer, modifier ou supprimer de données.' },
+              { role: 'ADMIN',      Icon: ShieldCheck, color: 'var(--R)',   desc: 'Accès complet — gestion des utilisateurs, paramètres, toutes les pages. Peut bloquer ou supprimer des comptes.' },
+              { role: 'COO',        Icon: Briefcase,   color: 'var(--B)',   desc: 'Accès complet à toutes les pages métier. Ne peut pas gérer les utilisateurs ni les paramètres système.' },
+              { role: 'VIEWER',     Icon: Eye,         color: 'var(--tx2)', desc: 'Lecture seule — peut consulter toutes les pages mais ne peut pas créer, modifier ou supprimer de données.' },
+              { role: 'ASSISTANTE', Icon: Wallet,      color: 'var(--A)',   desc: 'Accès limité — uniquement le tableau de bord et la petite caisse. Ne peut pas accéder aux autres modules.' },
             ].map(({ role, Icon, color, desc }) => (
               <div key={role} style={{ background: 'var(--sur2)', border: '1px solid var(--bor)', borderRadius: 'var(--r)', padding: '14px 16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -520,6 +523,7 @@ function TabUtilisateurs() {
           <Field label="Email *" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@marabu.ci" />
           <Field label="Mot de passe * (min. 6 caractères)" type="password" value={pwd} onChange={e => setPwd(e.target.value)} />
           <Field as="select" label="Rôle" value={role} onChange={e => setRole(e.target.value as typeof role)}>
+            <option value="ASSISTANTE">Assistante — petite caisse + tableau de bord</option>
             <option value="VIEWER">Lecteur — lecture seule</option>
             <option value="COO">COO — accès complet</option>
             <option value="ADMIN">Admin — accès total + gestion users</option>

@@ -3,6 +3,8 @@ import { Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ROUTES } from './routes';
 
+const ASSISTANTE_ALLOWED = new Set<string>([ROUTES.DASHBOARD, ROUTES.PETITE_CAISSE, ROUTES.PARAMETRES]);
+
 export function ProtectedRoute() {
   const { user, loading } = useAuth();
   const location = useLocation();
@@ -20,6 +22,10 @@ export function ProtectedRoute() {
 
   if (!user) {
     return <Navigate to={ROUTES.LOGIN} state={{ from: location }} replace />;
+  }
+
+  if (user.role === 'ASSISTANTE' && !ASSISTANTE_ALLOWED.has(location.pathname)) {
+    return <Navigate to={ROUTES.PETITE_CAISSE} replace />;
   }
 
   return <Outlet />;
