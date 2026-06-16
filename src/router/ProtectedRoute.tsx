@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ROUTES } from './routes';
 
-const ASSISTANTE_ALLOWED = new Set<string>([ROUTES.DASHBOARD, ROUTES.PETITE_CAISSE, ROUTES.PARAMETRES]);
+const ASSISTANTE_ALLOWED = new Set<string>([ROUTES.DASHBOARD, ROUTES.PETITE_CAISSE, ROUTES.PARAMETRES, ROUTES.DEPENSES]);
 
 export function ProtectedRoute() {
   const { user, loading } = useAuth();
