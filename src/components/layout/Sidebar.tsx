@@ -47,7 +47,7 @@ const allSections: { title: string; items: NavItem[] }[] = [
   },
 ];
 
-const ASSISTANTE_ROUTES = new Set<string>([ROUTES.DASHBOARD, ROUTES.PETITE_CAISSE]);
+const ASSISTANTE_ROUTES = new Set<string>([ROUTES.DASHBOARD, ROUTES.PETITE_CAISSE, ROUTES.DEPENSES]);
 
 function getSections(role: string) {
   if (role !== 'ASSISTANTE') return allSections;
