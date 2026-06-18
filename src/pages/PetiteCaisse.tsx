@@ -40,6 +40,7 @@ export default function PetiteCaisse() {
   const [tab, setTab]             = useState<Tab>('registre');
   const [period, setPeriod]       = useState('');
   const [filCaisse, setFilCaisse] = useState('');
+  const [sortDir, setSortDir]     = useState<'asc' | 'desc'>('asc');
 
   const { data: all = [], isLoading, error } = usePetiteCaisse();
   const createMutation = useCreatePC();
@@ -51,10 +52,15 @@ export default function PetiteCaisse() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const form = useForm(petiteCaisseSchema, initial);
 
-  const filtered = all.filter(p =>
-    (!period    || p.periode === period) &&
-    (!filCaisse || p.caisse  === filCaisse)
-  );
+  const filtered = all
+    .filter(p =>
+      (!period    || p.periode === period) &&
+      (!filCaisse || p.caisse  === filCaisse)
+    )
+    .sort((a, b) => sortDir === 'asc'
+      ? (a.date ?? '').localeCompare(b.date ?? '')
+      : (b.date ?? '').localeCompare(a.date ?? '')
+    );
 
   // Current balance per caisse (last solde of each)
   const soldeParCaisse = ['PRINCIPALE', 'BEN SOUDA'].map(c => {
@@ -67,7 +73,9 @@ export default function PetiteCaisse() {
   const totalSorties = all.filter(p => p.type === 'sortie').reduce((s, p) => s + p.sortie + p.penalite, 0);
 
   // Factures tab: entries that have a refFacture set
-  const factures = all.filter(p => p.refFacture && p.refFacture.trim() !== '');
+  const factures = all
+    .filter(p => p.refFacture && p.refFacture.trim() !== '')
+    .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
 
   useEffect(() => {
     chartInst.current?.destroy();
@@ -229,6 +237,10 @@ export default function PetiteCaisse() {
                 <option value="">Toutes caisses</option>
                 <option value="PRINCIPALE">Caisse principale</option>
                 <option value="BEN SOUDA">Caisse Ben Souda</option>
+              </select>
+              <select className="sel" value={sortDir} onChange={e => setSortDir(e.target.value as 'asc' | 'desc')} style={{ width: 170 }}>
+                <option value="asc">Date ↑ ancienne → récente</option>
+                <option value="desc">Date ↓ récente → ancienne</option>
               </select>
             </div>
             <div className="tw">
