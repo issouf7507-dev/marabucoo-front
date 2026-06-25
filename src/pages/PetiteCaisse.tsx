@@ -82,9 +82,7 @@ export default function PetiteCaisse() {
         (!filCaisse || p.caisse === filCaisse),
     )
     .sort((a, b) =>
-      sortDir === "asc"
-        ? (a.date ?? "").localeCompare(b.date ?? "")
-        : (b.date ?? "").localeCompare(a.date ?? ""),
+      sortDir === "asc" ? a.id - b.id : b.id - a.id,
     );
 
   // Current balance per caisse (last solde of each)
@@ -107,7 +105,7 @@ export default function PetiteCaisse() {
   // Factures tab: entries that have a refFacture set
   const factures = all
     .filter((p) => p.refFacture && p.refFacture.trim() !== "")
-    .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
+    .sort((a, b) => a.id - b.id);
 
   useEffect(() => {
     chartInst.current?.destroy();
@@ -348,8 +346,8 @@ export default function PetiteCaisse() {
                   onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
                   style={{ width: 190 }}
                 >
-                  <option value="asc">Date ↑ ancienne → récente</option>
-                  <option value="desc">Date ↓ récente → ancienne</option>
+                  <option value="asc">N° Pièce ↑ ancienne → récente</option>
+                  <option value="desc">N° Pièce ↓ récente → ancienne</option>
                 </select>
               </div>
             </div>
