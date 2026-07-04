@@ -18,6 +18,49 @@ function getPaie(s: ApiStaff, mois: string, annee: number) {
   return s.paies.find(p => p.mois === mois && p.annee === annee) ?? null;
 }
 
+// ── Période d'emploi ────────────────────────────────────────────────────
+// Convertit une date en index de mois absolu (annee*12 + moisIdx), ou null.
+function debutMonthIndex(debut: string | null | undefined): number | null {
+  if (!debut) return null;
+  const d = new Date(debut);
+  if (isNaN(d.getTime())) return null;
+  return d.getFullYear() * 12 + d.getMonth();
+}
+// `fin` est un texte libre : gère « jj/mm/aaaa », « aaaa-mm-jj » et « mm/aaaa ».
+function finMonthIndex(fin: string | null | undefined): number | null {
+  if (!fin || !fin.trim()) return null;
+  const s = fin.trim();
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);        // jj/mm/aaaa
+  if (m) return Number(m[3]) * 12 + (Number(m[2]) - 1);
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);               // aaaa-mm-jj (ISO)
+  if (m) return Number(m[1]) * 12 + (Number(m[2]) - 1);
+  m = s.match(/^(\d{1,2})\/(\d{4})$/);                       // mm/aaaa
+  if (m) return Number(m[2]) * 12 + (Number(m[1]) - 1);
+  return null; // non interprétable → considéré sans échéance
+}
+// Le collaborateur est-il dû pour ce mois (chevauchement = mois entier) ?
+function isDue(s: ApiStaff, moisIdx: number, annee: number): boolean {
+  const mv = annee * 12 + moisIdx;
+  const d = debutMonthIndex(s.debut);
+  const f = finMonthIndex(s.fin);
+  if (d !== null && mv < d) return false;
+  if (f !== null && mv > f) return false;
+  return true;
+}
+
+// Arriéré sur une année : mois échus (passés), dus selon Début/Fin, non ou
+// partiellement payés → reste à devoir. Les mois futurs ne comptent pas.
+function arrieres(s: ApiStaff, annee: number): number {
+  const dernierMois = annee < THIS_YEAR ? 11 : annee > THIS_YEAR ? -1 : new Date().getMonth();
+  let total = 0;
+  for (let i = 0; i <= dernierMois; i++) {
+    if (!isDue(s, i, annee)) continue;
+    const paye = s.paies.find(p => p.mois === MK[i] && p.annee === annee)?.montant ?? 0;
+    total += Math.max(0, s.salaire - paye);
+  }
+  return total;
+}
+
 function PaieStatut({ statut }: { statut: string | null | undefined }) {
   if (!statut) return <span className="bdg bn" style={{ display: 'inline-flex', gap: 3, alignItems: 'center' }}><Clock size={10} strokeWidth={2} />Non payé</span>;
   if (statut === 'Payé') return <span className="bdg bg" style={{ display: 'inline-flex', gap: 3, alignItems: 'center' }}><CheckCircle2 size={10} strokeWidth={2.5} />Payé</span>;
@@ -75,11 +118,12 @@ export default function Salaires() {
     (filActif === '' || (filActif === 'actif' ? s.actif : !s.actif))
   );
 
-  // KPIs du mois sélectionné
+  // KPIs du mois sélectionné — on ne doit rien hors de la période [Début → Fin]
   const actifs = staff.filter(s => s.actif);
-  const totalBase = actifs.reduce((s, x) => s + x.salaire, 0);
-  const totalPaie = actifs.reduce((s, x) => s + (getPaie(x, moisKey, annee)?.montant ?? 0), 0);
-  const nonPayes = actifs.filter(x => !getPaie(x, moisKey, annee)?.montant);
+  const dus = actifs.filter(x => isDue(x, moisIdx, annee)); // dûs ce mois-ci
+  const totalBase = dus.reduce((s, x) => s + x.salaire, 0);
+  const totalPaie = dus.reduce((s, x) => s + (getPaie(x, moisKey, annee)?.montant ?? 0), 0);
+  const nonPayes = dus.filter(x => !getPaie(x, moisKey, annee)?.montant);
   const resteAPayer = totalBase - totalPaie;
 
   // ── Collaborateur CRUD ───────────────────────────────────────────
@@ -157,7 +201,7 @@ export default function Salaires() {
         <div className="kpi g">
           <div className="kpi-l">Payé — {moisLabel}</div>
           <div className="kpi-v">{fmt(totalPaie)}</div>
-          <div className="kpi-s">{actifs.length - nonPayes.length} / {actifs.length} collaborateurs</div>
+          <div className="kpi-s">{dus.length - nonPayes.length} / {dus.length} dûs ce mois</div>
         </div>
         <div className={`kpi ${resteAPayer > 0 ? 'a' : 'g'}`}>
           <div className="kpi-l">Reste à payer</div>
@@ -234,9 +278,10 @@ export default function Salaires() {
                   {!isLoading && !error && activeStaff.map(s => {
                     const paie = getPaie(s, moisKey, annee);
                     const paid = !!paie?.montant;
+                    const due = isDue(s, moisIdx, annee);
                     const ecart = (paie?.montant ?? 0) - s.salaire;
                     return (
-                      <tr key={s.id} style={paid ? undefined : { background: 'var(--Al)' }}>
+                      <tr key={s.id} style={!due ? { opacity: .45 } : paid ? undefined : { background: 'var(--Al)' }}>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <div className="av" style={{ background: paid ? 'var(--Gl)' : 'var(--Al)', color: paid ? 'var(--G)' : 'var(--A)' }}>
@@ -250,29 +295,35 @@ export default function Salaires() {
                         </td>
                         <td style={{ fontSize: 11, color: 'var(--tx3)' }}>{s.poste ?? '—'}</td>
                         <td><span className="bdg bn">{s.nature}</span></td>
-                        <td className="tnum">{fmt(s.salaire)}</td>
+                        <td className="tnum" style={{ color: due ? undefined : 'var(--tx3)' }}>
+                          {due ? fmt(s.salaire) : <span style={{ fontSize: 11 }}>—</span>}
+                        </td>
                         <td className="tnum">
-                          {paid
-                            ? <span style={{ color: 'var(--G)', fontWeight: 700, fontFamily: 'var(--fm)' }}>{fmt(paie!.montant!)}</span>
-                            : <span style={{ color: 'var(--tx3)' }}>—</span>
+                          {!due
+                            ? <span style={{ color: 'var(--tx3)' }}>—</span>
+                            : paid
+                              ? <span style={{ color: 'var(--G)', fontWeight: 700, fontFamily: 'var(--fm)' }}>{fmt(paie!.montant!)}</span>
+                              : <span style={{ color: 'var(--tx3)' }}>—</span>
                           }
-                          {paid && ecart !== 0 && (
+                          {due && paid && ecart !== 0 && (
                             <span style={{ fontSize: 10, color: ecart > 0 ? 'var(--G)' : 'var(--R)', marginLeft: 4 }}>
                               ({ecart > 0 ? '+' : ''}{fmt(ecart)})
                             </span>
                           )}
                         </td>
-                        <td><PaieStatut statut={paie?.statut} /></td>
+                        <td>{due ? <PaieStatut statut={paie?.statut} /> : <span className="bdg bn">Hors période</span>}</td>
                         <td style={{ whiteSpace: 'nowrap' }}>
                           <div style={{ display: 'flex', gap: 5 }}>
-                            <button
-                              className={`btn xs ${paid ? '' : 'prim'}`}
-                              style={{ gap: 5 }}
-                              onClick={() => openPay(s)}
-                            >
-                              <CreditCard size={12} strokeWidth={2} />
-                              {paid ? 'Modifier' : 'Payer'}
-                            </button>
+                            {(due || paid) && (
+                              <button
+                                className={`btn xs ${paid ? '' : 'prim'}`}
+                                style={{ gap: 5 }}
+                                onClick={() => openPay(s)}
+                              >
+                                <CreditCard size={12} strokeWidth={2} />
+                                {paid ? 'Modifier' : 'Payer'}
+                              </button>
+                            )}
                             {paid && (
                               <button
                                 className="btn xs"
@@ -346,10 +397,11 @@ export default function Salaires() {
                           {MK.map((k, i) => {
                             const p = getPaie(s, k, annee);
                             const paid = !!p?.montant;
+                            const due = isDue(s, i, annee);
                             const past = i < new Date().getMonth();
-                            const late = past && !paid && s.actif;
+                            const late = due && past && !paid && s.actif;
                             return (
-                              <td key={k} style={{ padding: '4px 3px', textAlign: 'right' }}>
+                              <td key={k} style={{ padding: '4px 3px', textAlign: 'right', opacity: due ? 1 : .4 }}>
                                 {paid
                                   ? (
                                     <span style={{
@@ -361,9 +413,11 @@ export default function Salaires() {
                                       {fmt(p!.montant!)}
                                     </span>
                                   )
-                                  : late
-                                    ? <span style={{ fontSize: 10, color: 'var(--R)', fontWeight: 700 }}>!</span>
-                                    : <span style={{ color: 'var(--bor2)', fontSize: 11 }}>—</span>
+                                  : !due
+                                    ? <span style={{ color: 'var(--bor2)', fontSize: 11 }} title="Hors période d'emploi">·</span>
+                                    : late
+                                      ? <span style={{ fontSize: 10, color: 'var(--R)', fontWeight: 700 }}>!</span>
+                                      : <span style={{ color: 'var(--bor2)', fontSize: 11 }}>—</span>
                                 }
                               </td>
                             );
@@ -405,9 +459,12 @@ export default function Salaires() {
         <div className="card">
           <div className="ch fb">
             <h3>Liste des collaborateurs</h3>
-            <button className="btn prim" onClick={openNew}>
-              <Plus size={15} strokeWidth={2.5} />Nouveau
-            </button>
+            <div className="fr2">
+              <YearSelect value={annee} onChange={setAnnee} />
+              <button className="btn prim" onClick={openNew}>
+                <Plus size={15} strokeWidth={2.5} />Nouveau
+              </button>
+            </div>
           </div>
           <div className="tw">
             <table>
@@ -415,15 +472,18 @@ export default function Salaires() {
                 <tr>
                   <th>Nom</th><th>Poste</th><th>Nature</th>
                   <th className="tr">Salaire base</th>
-                  <th>Marabu</th><th>Statut</th><th>Début</th><th>Fin</th><th></th>
+                  <th>Marabu</th><th>Statut</th><th>Début</th><th>Fin</th>
+                  <th className="tr">Arriéré {annee}</th><th></th>
                 </tr>
               </thead>
               <tbody>
-                <QueryRows isLoading={isLoading} error={error} colSpan={9} />
+                <QueryRows isLoading={isLoading} error={error} colSpan={10} />
                 {!isLoading && !error && (
                   staff.length === 0
-                    ? <tr><td colSpan={9} className="empty">Aucun collaborateur</td></tr>
-                    : staff.map(s => (
+                    ? <tr><td colSpan={10} className="empty">Aucun collaborateur</td></tr>
+                    : staff.map(s => {
+                      const arr = arrieres(s, annee);
+                      return (
                       <tr key={s.id}>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -438,6 +498,9 @@ export default function Salaires() {
                         <td>{s.actif ? <span className="bdg bg">Actif</span> : <span className="bdg br">Inactif</span>}</td>
                         <td style={{ fontSize: 11 }}>{s.debut?.slice(0, 10) ?? '—'}</td>
                         <td style={{ fontSize: 11 }}>{s.fin ?? '—'}</td>
+                        <td className="tnum fw7" style={{ color: arr > 0 ? 'var(--R)' : 'var(--tx3)' }}>
+                          {arr > 0 ? fmt(arr) : '—'}
+                        </td>
                         <td style={{ whiteSpace: 'nowrap' }}>
                           <button className="ibt" title="Modifier" onClick={() => openEdit(s)}><Pencil size={13} strokeWidth={2} /></button>
                           <button className="ibt del" title="Supprimer"
@@ -446,7 +509,8 @@ export default function Salaires() {
                           </button>
                         </td>
                       </tr>
-                    ))
+                      );
+                    })
                 )}
               </tbody>
             </table>

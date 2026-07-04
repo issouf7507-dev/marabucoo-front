@@ -9,7 +9,7 @@ import { ApiError } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { ROUTES } from '../router/routes';
 
-// ─── Register schema ─────────────────────────────────────────────────
+// ─── Register schema ───────────────
 const registerSchema = z.object({
   prenom: z.string().min(1, 'Requis'),
   nom: z.string().min(1, 'Requis'),
