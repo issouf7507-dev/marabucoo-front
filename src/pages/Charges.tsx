@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, CreditCard, CheckCircle2, Clock, LayoutList } from 'lucide-react';
+import { Plus, Pencil, Trash2, CreditCard, CheckCircle2, Clock, LayoutList, Zap } from 'lucide-react';
 import { Chart, registerables } from 'chart.js';
 import { fmt, MF, MK, CAT_LBL, THIS_YEAR } from '../utils/format';
 import YearSelect from '../components/ui/YearSelect';
@@ -59,7 +59,7 @@ export default function Charges() {
   const chgRef   = useRef<HTMLCanvasElement>(null);
   const chgChart = useRef<Chart | null>(null);
 
-  const [tab, setTab]         = useState<'mois' | 'annee' | 'postes'>('mois');
+  const [tab, setTab]         = useState<'mois' | 'annee' | 'postes' | 'imprevus'>('mois');
   const [moisIdx, setMoisIdx] = useState(new Date().getMonth());
   const [annee, setAnnee]     = useState(THIS_YEAR);
   const [filCat, setFilCat]   = useState('');
@@ -76,10 +76,24 @@ export default function Charges() {
   const [payStatut, setPayStatut]   = useState('Payé');
   const [payDate, setPayDate]       = useState('');
 
+  // ── Modal imprévu (saisie rapide 1 étape) ─────────────────────────
+  const [impModal, setImpModal]     = useState(false);
+  const [impLib, setImpLib]         = useState('');
+  const [impCat, setImpCat]         = useState<ChargeInput['cat']>('EXPLOIT');
+  const [impMoisIdx, setImpMoisIdx] = useState(new Date().getMonth());
+  const [impMontant, setImpMontant] = useState(0);
+  const [impDate, setImpDate]       = useState(new Date().toISOString().slice(0, 10));
+  const [impObs, setImpObs]         = useState('');
+  const [impErr, setImpErr]         = useState('');
+
   const moisKey   = MK[moisIdx];
   const moisLabel = MF[moisIdx];
 
-  const filtered = charges.filter(c =>
+  // Séparation postes budgétés (prévus) vs imprévus (non budgétisables)
+  const prevus   = charges.filter(c => c.type !== 'imprevu');
+  const imprevus = charges.filter(c => c.type === 'imprevu');
+
+  const filtered = prevus.filter(c =>
     (!filCat    || c.categorie === filCat) &&
     (!filNature || c.nature    === filNature)
   );
@@ -91,14 +105,24 @@ export default function Charges() {
   // Variable charges are never "non saisies" — they have no recurring budget obligation
   const nonSaisies  = filtered.filter(c => c.nature !== 'variable' && isApplicable(c, moisKey) && !getReel(c, moisKey, annee)?.montant);
 
+  // Imprévus du mois sélectionné
+  const totalImprevu = imprevus.reduce((s, c) => s + (getReel(c, moisKey, annee)?.montant ?? 0), 0);
+  // Imprévus rattachés à l'année sélectionnée (pour l'onglet dédié)
+  const imprevusAnnee = imprevus.filter(c => c.realisations.some(r => r.annee === annee));
+
   // ── Graphique ─────────────────────────────────────────────────────
   useEffect(() => {
     chgChart.current?.destroy();
-    const fixes = charges.filter(c => c.nature !== 'variable');
+    const fixes = charges.filter(c => c.type !== 'imprevu' && c.nature !== 'variable');
+    const imps  = charges.filter(c => c.type === 'imprevu');
     const prevMois = MF.map((_, i) => fixes.reduce((s, c) => s + budgetMois(c, MK[i]), 0));
     const reelMoisData = MF.map((_, i) => {
       const k = MK[i];
       return fixes.reduce((s, c) => s + (getReel(c, k, annee)?.montant ?? 0), 0);
+    });
+    const imprevuMoisData = MF.map((_, i) => {
+      const k = MK[i];
+      return imps.reduce((s, c) => s + (getReel(c, k, annee)?.montant ?? 0), 0);
     });
     if (chgRef.current) {
       chgChart.current = new Chart(chgRef.current, {
@@ -108,6 +132,7 @@ export default function Charges() {
           datasets: [
             { label: 'Budget (fixe)', data: prevMois,     backgroundColor: 'rgba(181,98,10,.25)',  borderColor: '#B5620A', borderWidth: 1.5 },
             { label: 'Réalisé (fixe)', data: reelMoisData, backgroundColor: 'rgba(181,58,42,.5)',   borderColor: '#B53A2A', borderWidth: 1.5 },
+            { label: 'Imprévus',       data: imprevuMoisData, backgroundColor: 'rgba(124,58,237,.55)', borderColor: '#7C3AED', borderWidth: 1.5 },
           ],
         },
         options: {
@@ -166,7 +191,28 @@ export default function Charges() {
     );
   }
 
-  const isSavingPoste = createMutation.isPending || updateMutation.isPending;
+  // ── Imprévu — saisie rapide (crée le poste + enregistre le réalisé) ─
+  function openImprevu() {
+    setImpLib(''); setImpCat('EXPLOIT'); setImpMoisIdx(moisIdx);
+    setImpMontant(0); setImpDate(new Date().toISOString().slice(0, 10));
+    setImpObs(''); setImpErr(''); setImpModal(true);
+  }
+  async function saveImprevu() {
+    if (!impLib.trim())   { setImpErr('Le libellé est requis'); return; }
+    if (impMontant <= 0)  { setImpErr('Le montant doit être supérieur à 0'); return; }
+    const mk = MK[impMoisIdx];
+    const created = await createMutation.mutateAsync({
+      lib: impLib.trim(), cat: impCat, nature: 'variable', type: 'imprevu',
+      per: 'Ponctuelle', budget: 0, moisApplicables: mk, obs: impObs,
+    });
+    await reelMutation.mutateAsync({
+      id: created.id, mois: mk, annee, montant: impMontant, statut: 'Payé', datePmt: impDate || undefined,
+    });
+    setImpModal(false);
+  }
+
+  const isSavingPoste    = createMutation.isPending || updateMutation.isPending;
+  const isSavingImprevu  = createMutation.isPending || reelMutation.isPending;
 
   return (
     <div className="pg">
@@ -186,8 +232,8 @@ export default function Charges() {
       <div className="kr">
         <div className="kpi b">
           <div className="kpi-l">Postes</div>
-          <div className="kpi-v">{charges.length}</div>
-          <div className="kpi-s">{charges.filter(c => c.nature === 'fixe').length} fixes · {charges.filter(c => c.nature === 'variable').length} variables</div>
+          <div className="kpi-v">{prevus.length}</div>
+          <div className="kpi-s">{prevus.filter(c => c.nature === 'fixe').length} fixes · {prevus.filter(c => c.nature === 'variable').length} variables</div>
         </div>
         <div className="kpi a">
           <div className="kpi-l">Budget mensuel</div>
@@ -209,6 +255,11 @@ export default function Charges() {
           <div className="kpi-v">{nonSaisies.length}</div>
           <div className="kpi-s">poste{nonSaisies.length !== 1 ? 's' : ''} ce mois</div>
         </div>
+        <div className={`kpi ${totalImprevu > 0 ? 'p' : 'bn'}`}>
+          <div className="kpi-l">Imprévus — {moisLabel}</div>
+          <div className="kpi-v">{fmt(totalImprevu)}</div>
+          <div className="kpi-s">{imprevus.filter(c => getReel(c, moisKey, annee)?.montant).length} imprévu(s) ce mois</div>
+        </div>
       </div>
 
       {/* ── Tabs ── */}
@@ -218,6 +269,10 @@ export default function Charges() {
         <button className={`tab${tab === 'postes' ? ' on' : ''}`} onClick={() => setTab('postes')}>
           <LayoutList size={13} strokeWidth={2} style={{ display: 'inline', marginRight: 5 }} />
           Postes
+        </button>
+        <button className={`tab${tab === 'imprevus' ? ' on' : ''}`} onClick={() => setTab('imprevus')}>
+          <Zap size={13} strokeWidth={2} style={{ display: 'inline', marginRight: 5 }} />
+          Imprévus{imprevus.length > 0 ? ` (${imprevus.length})` : ''}
         </button>
       </div>
 
@@ -394,7 +449,7 @@ export default function Charges() {
                     </tr>
                   </thead>
                   <tbody>
-                    {charges.map(c => {
+                    {prevus.map(c => {
                       const annuelTotal = MK.reduce((s, k) => s + (getReel(c, k, annee)?.montant ?? 0), 0);
                       return (
                         <tr key={c.id}>
@@ -442,8 +497,8 @@ export default function Charges() {
                       <td className="fw7" style={{ padding: '7px 10px', fontSize: 12 }}>TOTAL BUDGET</td>
                       <td className="tnum fw7" style={{ color: 'var(--A)', fontSize: 11 }}>/ occurrence</td>
                       {MK.map(k => {
-                        const budM = charges.reduce((s, c) => s + budgetMois(c, k), 0);
-                        const tot  = charges.reduce((s, c) => s + (getReel(c, k, annee)?.montant ?? 0), 0);
+                        const budM = prevus.reduce((s, c) => s + budgetMois(c, k), 0);
+                        const tot  = prevus.reduce((s, c) => s + (getReel(c, k, annee)?.montant ?? 0), 0);
                         return (
                           <td key={k} className="tnum" style={{ fontSize: 10, padding: '4px 3px', textAlign: 'right' }}>
                             <div style={{ color: 'var(--A)', fontWeight: 600 }}>{fmt(budM)}</div>
@@ -452,7 +507,7 @@ export default function Charges() {
                         );
                       })}
                       <td className="tnum fw7 tc" style={{ fontSize: 12 }}>
-                        {fmt(MK.reduce((s, k) => s + charges.reduce((a, c) => a + (getReel(c, k, annee)?.montant ?? 0), 0), 0))}
+                        {fmt(MK.reduce((s, k) => s + prevus.reduce((a, c) => a + (getReel(c, k, annee)?.montant ?? 0), 0), 0))}
                       </td>
                     </tr>
                   </tfoot>
@@ -478,21 +533,20 @@ export default function Charges() {
             <table>
               <thead>
                 <tr>
-                  <th>Libellé</th><th>Catégorie</th><th>Nature</th><th>Type</th>
+                  <th>Libellé</th><th>Catégorie</th><th>Nature</th>
                   <th>Périodicité</th><th>Mois applicables</th><th className="tr">Budget / occurrence</th><th>Observations</th><th></th>
                 </tr>
               </thead>
               <tbody>
                 <QueryRows isLoading={isLoading} error={error} colSpan={8} />
                 {!isLoading && !error && (
-                  charges.length === 0
+                  prevus.length === 0
                     ? <tr><td colSpan={8} className="empty">Aucun poste de charge</td></tr>
-                    : charges.map(c => (
+                    : prevus.map(c => (
                       <tr key={c.id}>
                         <td className="fw7">{c.libelle}</td>
                         <td><span className="bdg bn">{CAT_LBL[c.categorie] || c.categorie}</span></td>
                         <td><span className={`bdg ${c.nature === 'fixe' ? 'bb' : 'bp'}`}>{c.nature}</span></td>
-                        <td><span className={`bdg ${c.type === 'imprevu' ? 'br' : 'bn'}`}>{c.type}</span></td>
                         <td style={{ fontSize: 11 }}>{c.periodicite}</td>
                         <td style={{ fontSize: 10 }}>
                           {c.moisApplicables
@@ -524,6 +578,106 @@ export default function Charges() {
           </div>
         </div>
       )}
+
+      {/* ════════════════════════════════════════════════════════════
+          Tab 4 — IMPRÉVUS (dépenses non budgétisables)
+      ════════════════════════════════════════════════════════════ */}
+      {tab === 'imprevus' && (
+        <div className="card">
+          <div className="ch fb">
+            <div>
+              <h3>Imprévus {annee}</h3>
+              <p style={{ fontSize: 11, color: 'var(--tx3)', margin: '2px 0 0' }}>
+                Dépenses non prévues au budget — total :&nbsp;
+                <strong style={{ color: 'var(--P, #7C3AED)', fontFamily: 'var(--fm)' }}>
+                  {fmt(imprevusAnnee.reduce((s, c) => s + (c.realisations.filter(r => r.annee === annee).reduce((a, r) => a + r.montant, 0)), 0))} FCFA
+                </strong>
+              </p>
+            </div>
+            <div className="fr2">
+              <YearSelect value={annee} onChange={setAnnee} />
+              <button className="btn prim" onClick={openImprevu}>
+                <Plus size={15} strokeWidth={2.5} />Nouvel imprévu
+              </button>
+            </div>
+          </div>
+          <div className="tw">
+            <table>
+              <thead>
+                <tr>
+                  <th>Libellé</th><th>Catégorie</th><th>Mois</th>
+                  <th className="tr">Montant</th><th>Date</th><th>Observations</th><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <QueryRows isLoading={isLoading} error={error} colSpan={7} />
+                {!isLoading && !error && (
+                  imprevusAnnee.length === 0
+                    ? <tr><td colSpan={7} className="empty">Aucun imprévu pour {annee}</td></tr>
+                    : imprevusAnnee.map(c => {
+                      const reel = c.realisations.find(r => r.annee === annee) ?? c.realisations[0];
+                      const mk   = reel?.mois ?? c.moisApplicables;
+                      const mi   = MK.indexOf(mk as typeof MK[number]);
+                      return (
+                        <tr key={c.id}>
+                          <td className="fw7">{c.libelle}</td>
+                          <td><span className="bdg bn">{CAT_LBL[c.categorie] || c.categorie}</span></td>
+                          <td>{mi >= 0 ? <span className="bdg bp">{MF[mi].slice(0, 3)}</span> : '—'}</td>
+                          <td className="tnum fw7" style={{ color: 'var(--P, #7C3AED)' }}>{fmt(reel?.montant ?? 0)}</td>
+                          <td style={{ fontSize: 11 }}>{reel?.datePmt?.slice(0, 10) ?? '—'}</td>
+                          <td style={{ fontSize: 11, color: 'var(--tx3)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {c.obs || '—'}
+                          </td>
+                          <td style={{ whiteSpace: 'nowrap' }}>
+                            <button className="ibt del" title="Supprimer"
+                              onClick={() => { if (confirm(`Supprimer l'imprévu « ${c.libelle} » ?`)) deleteMutation.mutate(c.id); }}>
+                              <Trash2 size={13} strokeWidth={2} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal imprévu (saisie rapide) ── */}
+      <Modal
+        open={impModal}
+        title="Nouvel imprévu"
+        onClose={() => setImpModal(false)}
+        onSave={saveImprevu}
+        saving={isSavingImprevu}
+        saveLabel={isSavingImprevu ? 'Enregistrement…' : 'Enregistrer'}
+        width={560}
+      >
+        <div style={{ background: 'var(--sur2)', border: '1px solid var(--bor)', borderRadius: 'var(--r)', padding: '9px 13px', marginBottom: 14, fontSize: 11.5, color: 'var(--tx3)' }}>
+          Un imprévu est une dépense non budgétisée. Il est enregistré comme réalisé pour le mois choisi et apparaît dans le graphe (barre « Imprévus »).
+        </div>
+        <div className="fg">
+          <Field full label="Libellé *" value={impLib}
+            onChange={e => { setImpLib(e.target.value); setImpErr(''); }}
+            placeholder="Ex : Réparation climatiseur" />
+          <Field as="select" label="Catégorie *" value={impCat}
+            onChange={e => setImpCat(e.target.value as ChargeInput['cat'])}>
+            {Object.entries(CAT_LBL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </Field>
+          <Field as="select" label="Mois *" value={impMoisIdx}
+            onChange={e => setImpMoisIdx(+e.target.value)}>
+            {MF.map((m, i) => <option key={m} value={i}>{m} {annee}</option>)}
+          </Field>
+          <Field label="Montant (FCFA) *" type="number" value={impMontant}
+            onChange={e => { setImpMontant(+e.target.value); setImpErr(''); }} />
+          <Field label="Date" type="date" value={impDate}
+            onChange={e => setImpDate(e.target.value)} />
+          <Field full label="Observations" value={impObs}
+            onChange={e => setImpObs(e.target.value)} />
+        </div>
+        {impErr && <div className="alert r" style={{ marginTop: 12 }}>{impErr}</div>}
+      </Modal>
 
       {/* ── Modal saisie réalisé ── */}
       <Modal
@@ -588,11 +742,6 @@ export default function Charges() {
             onChange={e => form.set('nature', e.target.value as ChargeInput['nature'])}>
             <option value="fixe">Fixe</option>
             <option value="variable">Variable</option>
-          </Field>
-          <Field as="select" label="Type" value={form.values.type}
-            onChange={e => form.set('type', e.target.value as ChargeInput['type'])}>
-            <option value="prevu">Prévu</option>
-            <option value="imprevu">Imprévu</option>
           </Field>
           <Field as="select" label="Périodicité" value={form.values.per} error={form.errors.per}
             onChange={e => {
