@@ -81,9 +81,12 @@ export default function PetiteCaisse() {
         (!period || p.periode === period) &&
         (!filCaisse || p.caisse === filCaisse),
     )
-    .sort((a, b) =>
-      sortDir === "asc" ? a.id - b.id : b.id - a.id,
-    );
+    .sort((a, b) => {
+      const da = a.date ?? "";
+      const db = b.date ?? "";
+      const cmp = da < db ? -1 : da > db ? 1 : a.id - b.id;
+      return sortDir === "asc" ? cmp : -cmp;
+    });
 
   // Current balance per caisse (last solde of each)
   const soldeParCaisse = ["PRINCIPALE", "BEN SOUDA"].map((c) => {
@@ -346,8 +349,8 @@ export default function PetiteCaisse() {
                   onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
                   style={{ width: 190 }}
                 >
-                  <option value="asc">N° Pièce ↑ ancienne → récente</option>
-                  <option value="desc">N° Pièce ↓ récente → ancienne</option>
+                  <option value="asc">Date ↑ ancienne → récente</option>
+                  <option value="desc">Date ↓ récente → ancienne</option>
                 </select>
               </div>
             </div>
