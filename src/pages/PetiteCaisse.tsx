@@ -32,6 +32,21 @@ const PERIODES = [
   "DECEMBRE",
 ];
 
+const MF_SHORT = [
+  "JAN",
+  "FÉV",
+  "MAR",
+  "AVR",
+  "MAI",
+  "JUN",
+  "JUL",
+  "AOÛ",
+  "SEP",
+  "OCT",
+  "NOV",
+  "DÉC",
+];
+
 const CATEGORIES = [
   "CHARGES D'EXPLOITATION",
   "RESSOURCES HUMAINES",
@@ -109,6 +124,23 @@ export default function PetiteCaisse() {
   const factures = all
     .filter((p) => p.refFacture && p.refFacture.trim() !== "")
     .sort((a, b) => a.id - b.id);
+
+  // Récapitulatif annuel : entrées / sorties / solde net par mois (toutes caisses)
+  const recap = (() => {
+    const rows = PERIODES.map((p) => {
+      const moisOps = all.filter((x) => x.periode === p);
+      const entrees = moisOps
+        .filter((x) => x.type === "entree")
+        .reduce((s, x) => s + x.entree, 0);
+      const sorties = moisOps
+        .filter((x) => x.type === "sortie")
+        .reduce((s, x) => s + x.sortie + x.penalite, 0);
+      return { entrees, sorties };
+    });
+    const totE = rows.reduce((s, r) => s + r.entrees, 0);
+    const totS = rows.reduce((s, r) => s + r.sorties, 0);
+    return { rows, totE, totS };
+  })();
 
   useEffect(() => {
     chartInst.current?.destroy();
@@ -469,6 +501,126 @@ export default function PetiteCaisse() {
                         </tr>
                       ))
                     ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="card" style={{ marginBottom: 14 }}>
+            <div className="ch">
+              <h3>Récapitulatif annuel {new Date().getFullYear()}</h3>
+            </div>
+            <div className="tw">
+              <table>
+                <thead>
+                  <tr>
+                    <th style={{ minWidth: 110 }}></th>
+                    {MF_SHORT.map((m, i) => (
+                      <th
+                        key={m}
+                        className="tr"
+                        style={{
+                          fontSize: 10.5,
+                          fontWeight: PERIODES[i] === period ? 700 : 400,
+                          color:
+                            PERIODES[i] === period ? "var(--B)" : undefined,
+                        }}
+                      >
+                        {m}
+                      </th>
+                    ))}
+                    <th className="tr" style={{ fontSize: 10.5 }}>
+                      TOTAL
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td
+                      style={{
+                        fontSize: 11,
+                        color: "var(--G)",
+                        fontWeight: 600,
+                      }}
+                    >
+                      ↑ Entrées caisse
+                    </td>
+                    {recap.rows.map((r, i) => (
+                      <td
+                        key={i}
+                        className="tnum"
+                        style={{
+                          fontSize: 11,
+                          color: r.entrees ? "var(--G)" : "var(--tx3)",
+                        }}
+                      >
+                        {r.entrees ? fmt(r.entrees) : "—"}
+                      </td>
+                    ))}
+                    <td className="tnum fw7" style={{ color: "var(--G)" }}>
+                      {fmt(recap.totE)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style={{
+                        fontSize: 11,
+                        color: "var(--R)",
+                        fontWeight: 600,
+                      }}
+                    >
+                      ↓ Sorties caisse
+                    </td>
+                    {recap.rows.map((r, i) => (
+                      <td
+                        key={i}
+                        className="tnum"
+                        style={{
+                          fontSize: 11,
+                          color: r.sorties ? "var(--R)" : "var(--tx3)",
+                        }}
+                      >
+                        {r.sorties ? fmt(r.sorties) : "—"}
+                      </td>
+                    ))}
+                    <td className="tnum fw7" style={{ color: "var(--R)" }}>
+                      {fmt(recap.totS)}
+                    </td>
+                  </tr>
+                  <tr style={{ borderTop: "1px solid var(--bor)" }}>
+                    <td style={{ fontSize: 11, fontWeight: 600 }}>Solde net</td>
+                    {recap.rows.map((r, i) => {
+                      const s = r.entrees - r.sorties;
+                      return (
+                        <td
+                          key={i}
+                          className="tnum"
+                          style={{
+                            fontSize: 11,
+                            color:
+                              s > 0
+                                ? "var(--G)"
+                                : s < 0
+                                  ? "var(--R)"
+                                  : "var(--tx3)",
+                          }}
+                        >
+                          {s !== 0 ? fmt(s) : "—"}
+                        </td>
+                      );
+                    })}
+                    <td
+                      className="tnum fw7"
+                      style={{
+                        color:
+                          recap.totE - recap.totS >= 0
+                            ? "var(--G)"
+                            : "var(--R)",
+                      }}
+                    >
+                      {fmt(recap.totE - recap.totS)}
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
