@@ -103,6 +103,11 @@ export default function PetiteCaisse() {
       return sortDir === "asc" ? cmp : -cmp;
     });
 
+  // Data source respecting the caisse filter (impacts recap + charts)
+  const byCaisse = filCaisse
+    ? all.filter((x) => x.caisse === filCaisse)
+    : all;
+
   // Current balance per caisse (last solde of each)
   const soldeParCaisse = ["PRINCIPALE", "BEN SOUDA"].map((c) => {
     const rows = all.filter((x) => x.caisse === c);
@@ -128,7 +133,7 @@ export default function PetiteCaisse() {
   // Récapitulatif annuel : entrées / sorties / solde net par mois (toutes caisses)
   const recap = (() => {
     const rows = PERIODES.map((p) => {
-      const moisOps = all.filter((x) => x.periode === p);
+      const moisOps = byCaisse.filter((x) => x.periode === p);
       const entrees = moisOps
         .filter((x) => x.type === "entree")
         .reduce((s, x) => s + x.entree, 0);
@@ -145,52 +150,56 @@ export default function PetiteCaisse() {
   useEffect(() => {
     chartInst.current?.destroy();
     const labels = PERIODES.map((p) => p.slice(0, 3));
-    const datasets = [
+    const caisseDefs = [
       {
-        label: "PRINCIPALE — Entrées",
-        data: PERIODES.map((per) =>
-          all
-            .filter((x) => x.caisse === "PRINCIPALE" && x.periode === per)
-            .reduce((s, x) => s + x.entree, 0),
-        ),
-        backgroundColor: "rgba(27,94,64,.65)",
-        borderColor: "#1B5E40",
-        borderWidth: 1,
+        caisse: "PRINCIPALE",
+        entree: {
+          label: "PRINCIPALE — Entrées",
+          backgroundColor: "rgba(27,94,64,.65)",
+          borderColor: "#1B5E40",
+        },
+        sortie: {
+          label: "PRINCIPALE — Sorties",
+          backgroundColor: "rgba(220,38,38,.65)",
+          borderColor: "#dc2626",
+        },
       },
       {
-        label: "PRINCIPALE — Sorties",
-        data: PERIODES.map((per) =>
-          all
-            .filter((x) => x.caisse === "PRINCIPALE" && x.periode === per)
-            .reduce((s, x) => s + x.sortie + x.penalite, 0),
-        ),
-        backgroundColor: "rgba(220,38,38,.65)",
-        borderColor: "#dc2626",
-        borderWidth: 1,
-      },
-      {
-        label: "BEN SOUDA — Entrées",
-        data: PERIODES.map((per) =>
-          all
-            .filter((x) => x.caisse === "BEN SOUDA" && x.periode === per)
-            .reduce((s, x) => s + x.entree, 0),
-        ),
-        backgroundColor: "rgba(26,78,138,.65)",
-        borderColor: "#1A4E8A",
-        borderWidth: 1,
-      },
-      {
-        label: "BEN SOUDA — Sorties",
-        data: PERIODES.map((per) =>
-          all
-            .filter((x) => x.caisse === "BEN SOUDA" && x.periode === per)
-            .reduce((s, x) => s + x.sortie + x.penalite, 0),
-        ),
-        backgroundColor: "rgba(234,88,12,.65)",
-        borderColor: "#ea580c",
-        borderWidth: 1,
+        caisse: "BEN SOUDA",
+        entree: {
+          label: "BEN SOUDA — Entrées",
+          backgroundColor: "rgba(26,78,138,.65)",
+          borderColor: "#1A4E8A",
+        },
+        sortie: {
+          label: "BEN SOUDA — Sorties",
+          backgroundColor: "rgba(234,88,12,.65)",
+          borderColor: "#ea580c",
+        },
       },
     ];
+    const datasets = caisseDefs
+      .filter((c) => !filCaisse || c.caisse === filCaisse)
+      .flatMap((c) => [
+        {
+          ...c.entree,
+          data: PERIODES.map((per) =>
+            all
+              .filter((x) => x.caisse === c.caisse && x.periode === per)
+              .reduce((s, x) => s + x.entree, 0),
+          ),
+          borderWidth: 1,
+        },
+        {
+          ...c.sortie,
+          data: PERIODES.map((per) =>
+            all
+              .filter((x) => x.caisse === c.caisse && x.periode === per)
+              .reduce((s, x) => s + x.sortie + x.penalite, 0),
+          ),
+          borderWidth: 1,
+        },
+      ]);
     if (chartRef.current) {
       chartInst.current = new Chart(chartRef.current, {
         type: "bar",
@@ -216,7 +225,7 @@ export default function PetiteCaisse() {
     return () => {
       chartInst.current?.destroy();
     };
-  }, [all]);
+  }, [all, filCaisse]);
 
   function openNew() {
     setEditId(null);
