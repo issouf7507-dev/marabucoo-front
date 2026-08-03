@@ -108,9 +108,19 @@ export default function PetiteCaisse() {
     ? all.filter((x) => x.caisse === filCaisse)
     : all;
 
-  // Current balance per caisse (last solde of each)
+  // Opérations jusqu'à la fin de la période sélectionnée (solde = cumul)
+  const periodIdx = PERIODES.indexOf(period);
+  const upToPeriod =
+    periodIdx === -1
+      ? all
+      : all.filter((x) => {
+          const i = PERIODES.indexOf(x.periode ?? "");
+          return i !== -1 && i <= periodIdx;
+        });
+
+  // Balance per caisse at the end of the selected period (last solde of each)
   const soldeParCaisse = ["PRINCIPALE", "BEN SOUDA"].map((c) => {
-    const rows = all.filter((x) => x.caisse === c);
+    const rows = upToPeriod.filter((x) => x.caisse === c);
     return {
       caisse: c,
       solde: rows.length > 0 ? rows[rows.length - 1].solde : 0,
@@ -118,10 +128,11 @@ export default function PetiteCaisse() {
   });
   const soldeTotal = soldeParCaisse.reduce((s, x) => s + x.solde, 0);
 
-  const totalEntrees = all
+  // Entrées / sorties de la période affichée (suit aussi le filtre caisse)
+  const totalEntrees = filtered
     .filter((p) => p.type === "entree")
     .reduce((s, p) => s + p.entree, 0);
-  const totalSorties = all
+  const totalSorties = filtered
     .filter((p) => p.type === "sortie")
     .reduce((s, p) => s + p.sortie + p.penalite, 0);
 
@@ -294,7 +305,9 @@ export default function PetiteCaisse() {
         <div className={`kpi ${soldeTotal >= 0 ? "g" : "r"}`}>
           <div className="kpi-l">Solde total caisse</div>
           <div className="kpi-v">{fmt(soldeTotal)}</div>
-          <div className="kpi-s">FCFA en caisse</div>
+          <div className="kpi-s">
+            {period ? `FCFA fin ${period}` : "FCFA en caisse"}
+          </div>
         </div>
         {soldeParCaisse.map(({ caisse, solde }) => (
           <div key={caisse} className={`kpi ${solde >= 0 ? "g" : "r"}`}>
@@ -304,16 +317,22 @@ export default function PetiteCaisse() {
                 : "Caisse Ben Souda"}
             </div>
             <div className="kpi-v">{fmt(solde)}</div>
-            <div className="kpi-s">FCFA</div>
+            <div className="kpi-s">
+              {period ? `FCFA fin ${period}` : "FCFA"}
+            </div>
           </div>
         ))}
         <div className="kpi g">
-          <div className="kpi-l">Total entrées</div>
+          <div className="kpi-l">
+            {period ? `Entrées ${period}` : "Total entrées"}
+          </div>
           <div className="kpi-v">{fmt(totalEntrees)}</div>
           <div className="kpi-s">FCFA dotations</div>
         </div>
         <div className="kpi r">
-          <div className="kpi-l">Total sorties</div>
+          <div className="kpi-l">
+            {period ? `Sorties ${period}` : "Total sorties"}
+          </div>
           <div className="kpi-v">{fmt(totalSorties)}</div>
           <div className="kpi-s">FCFA dépensés + pénalités</div>
         </div>
@@ -409,18 +428,17 @@ export default function PetiteCaisse() {
                     <th className="tr">Entrée</th>
                     <th className="tr">Sortie</th>
                     <th className="tr">Pénalité</th>
-                    <th className="tr">Solde</th>
                     <th>Réf. facture</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  <QueryRows isLoading={isLoading} error={error} colSpan={13} />
+                  <QueryRows isLoading={isLoading} error={error} colSpan={12} />
                   {!isLoading &&
                     !error &&
                     (filtered.length === 0 ? (
                       <tr>
-                        <td colSpan={13} className="empty">
+                        <td colSpan={12} className="empty">
                           Aucune opération
                         </td>
                       </tr>
@@ -470,14 +488,6 @@ export default function PetiteCaisse() {
                           </td>
                           <td className="tnum" style={{ color: "var(--tx3)" }}>
                             {p.penalite > 0 ? fmt(p.penalite) : "—"}
-                          </td>
-                          <td
-                            className="tnum fw7"
-                            style={{
-                              color: p.solde >= 0 ? "var(--G)" : "var(--R)",
-                            }}
-                          >
-                            {fmt(p.solde)}
                           </td>
                           <td
                             style={{
