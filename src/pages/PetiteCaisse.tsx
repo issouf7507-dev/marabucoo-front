@@ -78,6 +78,7 @@ export default function PetiteCaisse() {
   const [tab, setTab] = useState<Tab>("registre");
   const [period, setPeriod] = useState("");
   const [filCaisse, setFilCaisse] = useState("");
+  const [filRef, setFilRef] = useState("");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   const { data: all = [], isLoading, error } = usePetiteCaisse();
@@ -94,7 +95,11 @@ export default function PetiteCaisse() {
     .filter(
       (p) =>
         (!period || p.periode === period) &&
-        (!filCaisse || p.caisse === filCaisse),
+        (!filCaisse || p.caisse === filCaisse) &&
+        (!filRef ||
+          (p.refFacture ?? "")
+            .toLowerCase()
+            .includes(filRef.trim().toLowerCase())),
     )
     .sort((a, b) => {
       const da = a.date ?? "";
@@ -393,6 +398,13 @@ export default function PetiteCaisse() {
             <div className="ch fb">
               <h3>Registre petite caisse</h3>
               <div>
+                <input
+                  className="inp"
+                  placeholder="Filtrer par Réf. facture…"
+                  value={filRef}
+                  onChange={(e) => setFilRef(e.target.value)}
+                  style={{ width: 200, marginRight: 10 }}
+                />
                 <select
                   className="sel"
                   value={filCaisse}
