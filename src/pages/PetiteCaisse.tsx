@@ -79,6 +79,7 @@ export default function PetiteCaisse() {
   const [period, setPeriod] = useState("");
   const [filCaisse, setFilCaisse] = useState("");
   const [filRef, setFilRef] = useState("");
+  const [sortBy, setSortBy] = useState<"date" | "ref">("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   const { data: all = [], isLoading, error } = usePetiteCaisse();
@@ -102,6 +103,16 @@ export default function PetiteCaisse() {
             .includes(filRef.trim().toLowerCase())),
     )
     .sort((a, b) => {
+      if (sortBy === "ref") {
+        const ra = a.refFacture?.trim() ?? "";
+        const rb = b.refFacture?.trim() ?? "";
+        // Opérations sans réf. toujours en fin de liste
+        if (!ra || !rb) return ra ? -1 : rb ? 1 : a.id - b.id;
+        const cmp =
+          ra.localeCompare(rb, "fr", { numeric: true, sensitivity: "base" }) ||
+          a.id - b.id;
+        return sortDir === "asc" ? cmp : -cmp;
+      }
       const da = a.date ?? "";
       const db = b.date ?? "";
       const cmp = da < db ? -1 : da > db ? 1 : a.id - b.id;
@@ -417,12 +428,18 @@ export default function PetiteCaisse() {
                 </select>
                 <select
                   className="sel"
-                  value={sortDir}
-                  onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
+                  value={`${sortBy}-${sortDir}`}
+                  onChange={(e) => {
+                    const [by, dir] = e.target.value.split("-");
+                    setSortBy(by as "date" | "ref");
+                    setSortDir(dir as "asc" | "desc");
+                  }}
                   style={{ width: 190 }}
                 >
-                  <option value="asc">Date ↑ ancienne → récente</option>
-                  <option value="desc">Date ↓ récente → ancienne</option>
+                  <option value="date-asc">Date ↑ ancienne → récente</option>
+                  <option value="date-desc">Date ↓ récente → ancienne</option>
+                  <option value="ref-asc">Réf. facture ↑ A → Z</option>
+                  <option value="ref-desc">Réf. facture ↓ Z → A</option>
                 </select>
               </div>
             </div>
